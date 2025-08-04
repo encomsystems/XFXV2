@@ -81,6 +81,11 @@
             border-left: 4px solid #27ae60;
         }
 
+        .status-item.current {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+
         .status-item.pending {
             background-color: #f8f9fa;
             border-left: 4px solid #bdc3c7;
@@ -103,6 +108,11 @@
             color: white;
         }
 
+        .status-icon.current {
+            background-color: #2196f3;
+            color: white;
+        }
+
         .status-icon.pending {
             background-color: #bdc3c7;
             color: white;
@@ -118,7 +128,7 @@
             color: #7f8c8d;
         }
 
-        .start-process {
+        .step-container {
             background: white;
             border-radius: 12px;
             padding: 30px;
@@ -126,17 +136,18 @@
             text-align: center;
         }
 
-        .start-process h2 {
+        .step-container h2 {
             font-size: 1.5rem;
             margin-bottom: 10px;
             color: #2c3e50;
         }
 
-        .start-process .subtitle {
+        .step-container .subtitle {
             color: #7f8c8d;
             margin-bottom: 30px;
         }
 
+        /* Start Process Step */
         .play-icon {
             width: 80px;
             height: 80px;
@@ -164,17 +175,6 @@
             margin-left: 5px;
         }
 
-        .workflow-section h3 {
-            font-size: 1.2rem;
-            margin-bottom: 15px;
-            color: #2c3e50;
-        }
-
-        .workflow-section p {
-            color: #7f8c8d;
-            margin-bottom: 25px;
-        }
-
         .start-btn {
             background: #4285f4;
             color: white;
@@ -193,6 +193,108 @@
         .start-btn:disabled {
             background: #bdc3c7;
             cursor: not-allowed;
+        }
+
+        /* Upload Invoice Step */
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 12px;
+            padding: 40px 20px;
+            margin: 20px 0;
+            background: #fafafa;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #4285f4;
+            background: #f0f7ff;
+        }
+
+        .upload-area.has-file {
+            border-color: #27ae60;
+            background: #f0f9ff;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #bdc3c7;
+            margin-bottom: 20px;
+        }
+
+        .upload-area.has-file .upload-icon {
+            color: #27ae60;
+        }
+
+        .file-info {
+            display: none;
+            background: #e8f5e8;
+            border: 1px solid #27ae60;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .file-name {
+            font-weight: bold;
+            color: #27ae60;
+            margin-bottom: 5px;
+        }
+
+        .file-size {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .upload-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .upload-btn:hover {
+            background: #219a52;
+        }
+
+        .upload-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4285f4;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .success-message {
@@ -265,27 +367,6 @@
             color: #888;
         }
 
-        .loading {
-            display: none;
-            text-align: center;
-            margin: 20px 0;
-        }
-
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #4285f4;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -310,8 +391,8 @@
                 <h2>Invoice workflow status</h2>
                 <p class="subtitle">Track your progress</p>
                 
-                <div class="status-item active" id="start-process-status">
-                    <div class="status-icon complete">✓</div>
+                <div class="status-item pending" id="start-process-status">
+                    <div class="status-icon pending">1</div>
                     <div class="status-text">
                         <h3>Start Process</h3>
                         <p>Initiate your XFX process</p>
@@ -319,7 +400,7 @@
                 </div>
 
                 <div class="status-item pending" id="upload-invoice-status">
-                    <div class="status-icon pending">📄</div>
+                    <div class="status-icon pending">2</div>
                     <div class="status-text">
                         <h3>Upload Invoice</h3>
                         <p>Provide XML file</p>
@@ -327,7 +408,7 @@
                 </div>
 
                 <div class="status-item pending" id="sending-invoice-status">
-                    <div class="status-icon pending">📤</div>
+                    <div class="status-icon pending">3</div>
                     <div class="status-text">
                         <h3>Sending Invoice</h3>
                         <p>Accessing XFX API</p>
@@ -335,7 +416,7 @@
                 </div>
 
                 <div class="status-item pending" id="processing-status">
-                    <div class="status-icon pending">⚙️</div>
+                    <div class="status-icon pending">4</div>
                     <div class="status-text">
                         <h3>Invoice Processing</h3>
                         <p>Waiting for receiving confirmation</p>
@@ -343,7 +424,7 @@
                 </div>
 
                 <div class="status-item pending" id="processed-status">
-                    <div class="status-icon pending">✅</div>
+                    <div class="status-icon pending">5</div>
                     <div class="status-text">
                         <h3>Invoice Processed</h3>
                         <p>Status of invoice</p>
@@ -351,7 +432,8 @@
                 </div>
             </div>
 
-            <div class="start-process">
+            <!-- Step 1: Start Process -->
+            <div class="step-container" id="startProcessStep">
                 <h2>Start Process</h2>
                 <p class="subtitle">Click to initiate the n8n workflow and get your resume URL</p>
                 
@@ -364,15 +446,40 @@
                     <button class="start-btn" id="startBtn" onclick="startWorkflow()">Start Process</button>
                 </div>
 
-                <div class="loading" id="loading">
+                <div class="loading" id="startLoading">
                     <div class="spinner"></div>
                     <p>Initializing workflow...</p>
                 </div>
+            </div>
 
-                <div class="success-message" id="successMessage">
-                    <h4>Workflow Started Successfully</h4>
-                    <p>Resume URL received:</p>
-                    <div class="resume-url" id="resumeUrl"></div>
+            <!-- Step 2: Upload Invoice -->
+            <div class="step-container hidden" id="uploadInvoiceStep">
+                <h2>Upload Your Invoice</h2>
+                <p class="subtitle">Select your XML invoice file to continue processing</p>
+                
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon">📄</div>
+                    <h3>Drop your XML file here or click to browse</h3>
+                    <p>Supported formats: XML files only</p>
+                </div>
+
+                <input type="file" id="fileInput" accept=".xml" style="display: none;" onchange="handleFileSelect(event)">
+                
+                <div class="file-info" id="fileInfo">
+                    <div class="file-name" id="fileName"></div>
+                    <div class="file-size" id="fileSize"></div>
+                </div>
+
+                <button class="upload-btn" id="uploadBtn" onclick="uploadFile()" disabled>Upload Invoice</button>
+
+                <div class="loading" id="uploadLoading">
+                    <div class="spinner"></div>
+                    <p>Uploading invoice...</p>
+                </div>
+
+                <div class="success-message" id="uploadSuccess">
+                    <h4>Invoice Uploaded Successfully</h4>
+                    <p>Your invoice has been processed and sent to XFX API</p>
                 </div>
             </div>
         </div>
@@ -387,6 +494,8 @@
 
     <script>
         let resumeUrl = null;
+        let selectedFile = null;
+        let currentStep = 1;
 
         function addLog(message, type = 'info') {
             const logContainer = document.getElementById('logContainer');
@@ -398,29 +507,53 @@
             logContainer.scrollTop = logContainer.scrollHeight;
         }
 
-        function updateStatusItem(itemId, isActive) {
+        function updateStatusItem(itemId, status) {
             const item = document.getElementById(itemId);
             const icon = item.querySelector('.status-icon');
             
-            if (isActive) {
-                item.classList.remove('pending');
+            // Reset classes
+            item.classList.remove('pending', 'current', 'active');
+            icon.classList.remove('pending', 'current', 'complete');
+            
+            if (status === 'complete') {
                 item.classList.add('active');
-                icon.classList.remove('pending');
                 icon.classList.add('complete');
                 icon.textContent = '✓';
+            } else if (status === 'current') {
+                item.classList.add('current');
+                icon.classList.add('current');
+            } else {
+                item.classList.add('pending');
+                icon.classList.add('pending');
             }
+        }
+
+        function showStep(stepNumber) {
+            // Hide all steps
+            document.getElementById('startProcessStep').classList.add('hidden');
+            document.getElementById('uploadInvoiceStep').classList.add('hidden');
+            
+            // Show current step
+            if (stepNumber === 1) {
+                document.getElementById('startProcessStep').classList.remove('hidden');
+                updateStatusItem('start-process-status', 'current');
+            } else if (stepNumber === 2) {
+                document.getElementById('uploadInvoiceStep').classList.remove('hidden');
+                updateStatusItem('start-process-status', 'complete');
+                updateStatusItem('upload-invoice-status', 'current');
+            }
+            
+            currentStep = stepNumber;
         }
 
         async function startWorkflow() {
             const startBtn = document.getElementById('startBtn');
-            const loading = document.getElementById('loading');
-            const successMessage = document.getElementById('successMessage');
+            const loading = document.getElementById('startLoading');
             
             startBtn.disabled = true;
             loading.style.display = 'block';
-            successMessage.classList.remove('show');
             
-            addLog('Sending file to n8n workflow - http://localhost:5878/webhook-waiting/177');
+            addLog('Sending request to n8n workflow...');
             
             try {
                 const response = await fetch('/api/start-workflow', {
@@ -438,20 +571,13 @@
                 
                 if (data.resumeUrl) {
                     resumeUrl = data.resumeUrl;
-                    document.getElementById('resumeUrl').textContent = resumeUrl;
-                    successMessage.classList.add('show');
+                    addLog('Workflow started successfully');
+                    addLog(`Resume URL received: ${resumeUrl}`);
                     
-                    addLog('Invoice sent successfully to n8n');
-                    addLog('XFX API response received successfully!');
-                    addLog('XFX Tracking ID: 0e40e2e4-b318-4894-9e1c-68ddbf89de10');
-                    addLog('Invoice Number: 25904000');
-                    addLog('External Tracking ID: string');
-                    addLog('Date Received: 7/28/2025, 11:24:52 AM');
-                    addLog('Invoice processing completed successfully');
-                    addLog('Invoice processing step started');
-                    addLog('Invoice processing completed');
-                    
-                    updateStatusItem('start-process-status', true);
+                    // Move to step 2
+                    setTimeout(() => {
+                        showStep(2);
+                    }, 1000);
                 } else {
                     throw new Error('No resume URL received');
                 }
@@ -464,8 +590,109 @@
             }
         }
 
-        // Initialize with welcome message
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedFile = file;
+                
+                // Update UI
+                document.getElementById('uploadArea').classList.add('has-file');
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('fileSize').textContent = `${(file.size / 1024).toFixed(2)} KB`;
+                document.getElementById('fileInfo').classList.add('show');
+                document.getElementById('uploadBtn').disabled = false;
+                
+                addLog(`File selected: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+            }
+        }
+
+        async function uploadFile() {
+            if (!selectedFile || !resumeUrl) {
+                alert('Please select a file first');
+                return;
+            }
+
+            const uploadBtn = document.getElementById('uploadBtn');
+            const loading = document.getElementById('uploadLoading');
+            const success = document.getElementById('uploadSuccess');
+            
+            uploadBtn.disabled = true;
+            loading.style.display = 'block';
+            success.classList.remove('show');
+            
+            addLog(`Uploading ${selectedFile.name} to n8n workflow...`);
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                formData.append('action', 'upload-invoice');
+                
+                const response = await fetch(`/api/resume-workflow?resumeUrl=${encodeURIComponent(resumeUrl)}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (data.success !== false) {
+                    success.classList.add('show');
+                    addLog('Invoice uploaded successfully to n8n');
+                    addLog('Processing invoice through XFX API...');
+                    
+                    // Update status to next step
+                    updateStatusItem('upload-invoice-status', 'complete');
+                    updateStatusItem('sending-invoice-status', 'current');
+                    
+                    // If there's a new resumeUrl, update it
+                    if (data.resumeUrl) {
+                        resumeUrl = data.resumeUrl;
+                        addLog(`New resume URL received: ${resumeUrl}`);
+                    }
+                    
+                } else {
+                    throw new Error(data.error || 'Upload failed');
+                }
+            } catch (error) {
+                addLog(`Upload error: ${error.message}`, 'error');
+                alert('Failed to upload file. Please try again.');
+            } finally {
+                loading.style.display = 'none';
+                uploadBtn.disabled = false;
+            }
+        }
+
+        // Drag and drop functionality
+        const uploadArea = document.getElementById('uploadArea');
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.name.toLowerCase().endsWith('.xml')) {
+                    document.getElementById('fileInput').files = files;
+                    handleFileSelect({ target: { files: files } });
+                } else {
+                    alert('Please select an XML file only');
+                }
+            }
+        });
+
+        // Initialize
         window.addEventListener('load', () => {
+            showStep(1);
             setTimeout(() => {
                 addLog('XFX Invoice System loaded successfully');
                 addLog('Ready to process invoices - Click Start Process to begin');
