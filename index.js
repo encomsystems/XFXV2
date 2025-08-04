@@ -4,6 +4,7 @@ const app = express();
 const port = 3000;
 
 // Middleware
+app.use('/api/resume-workflow', express.raw({ type: () => true, limit: '50mb' }));
 app.use(express.json());
 app.use(express.static('public'));
 
@@ -49,26 +50,38 @@ app.post('/api/resume-workflow', async (req, res) => {
     
     try {
         console.log('Resuming workflow at:', resumeUrl);
+        console.log('Content-Type:', req.headers['content-type']);
         
-        // Stream request body directly to n8n with duplex option
+        // Create headers object
+        const headers = {};
+        if (req.headers['content-type']) {
+            headers['Content-Type'] = req.headers['content-type'];
+        }
+        if (req.headers['content-length']) {
+            headers['Content-Length'] = req.headers['content-length'];
+        }
+        
+        // Stream request body directly to n8n
         const response = await fetch(resumeUrl, {
             method: 'POST',
-            body: req,           // Pass entire request object - NO FILE STORAGE
-            duplex: 'half',      // Required for Node.js streaming
-            headers: {
-                'Content-Type': req.headers['content-type'],
-                'Content-Length': req.headers['content-length']
-            }
+            body: req,
+            duplex: 'half',
+            headers: headers
         });
         
+        if (!response.ok) {
+            throw new Error(`n8n responded with status: ${response.status}`);
+        }
+        
         const data = await response.json();
+        console.log('n8n response:', data);
         res.json(data);
         
     } catch (error) {
-        console.error('Error resuming workflow:', error);
+        console.error('Error resuming workflow:', error.message);
         res.status(500).json({
             success: false,
-            error: 'Failed to resume workflow'
+            error: `Failed to resume workflow: ${error.message}`
         });
     }
 });
