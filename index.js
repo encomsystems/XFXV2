@@ -4,7 +4,6 @@ const app = express();
 const port = 3000;
 
 // Middleware
-app.use('/api/resume-workflow', express.raw({ type: () => true, limit: '50mb' }));
 app.use(express.json());
 app.use(express.static('public'));
 
@@ -38,7 +37,7 @@ app.post('/api/start-workflow', async (req, res) => {
 });
 
 // API endpoint to resume workflow (proxy to n8n resume URL)
-app.post('/api/resume-workflow', async (req, res) => {
+app.post('/api/resume-workflow', (req, res) => {
     const resumeUrl = req.query.resumeUrl;
     
     if (!resumeUrl) {
@@ -48,26 +47,34 @@ app.post('/api/resume-workflow', async (req, res) => {
         });
     }
     
-    try {
-        console.log('Resuming workflow at:', resumeUrl);
-        console.log('Content-Type:', req.headers['content-type']);
-        
-        // Create headers object
-        const headers = {};
-        if (req.headers['content-type']) {
-            headers['Content-Type'] = req.headers['content-type'];
-        }
-        if (req.headers['content-length']) {
-            headers['Content-Length'] = req.headers['content-length'];
-        }
-        
-        // Stream request body directly to n8n
-        const response = await fetch(resumeUrl, {
-            method: 'POST',
-            body: req,
-            duplex: 'half',
-            headers: headers
-        });
+    console.log('Resuming workflow at:', resumeUrl);
+    console.log('Content-Type:', req.headers['content-type']);
+    
+    // Create headers object
+    const headers = {};
+    if (req.headers['content-type']) {
+        headers['Content-Type'] = req.headers['content-type'];
+    }
+    if (req.headers['content-length']) {
+        headers['Content-Length'] = req.headers['content-length'];
+    }
+    
+    // Collect body data manually
+    const chunks = [];
+    req.on('data', chunk => {
+        chunks.push(chunk);
+    });
+    
+    req.on('end', async () => {
+        try {
+            const body = Buffer.concat(chunks);
+            
+            // Stream body directly to n8n
+            const response = await fetch(resumeUrl, {
+                method: 'POST',
+                body: body,
+                headers: headers
+            });
         
         console.log('n8n response status:', response.status);
         console.log('n8n response headers:', Object.fromEntries(response.headers.entries()));
@@ -94,18 +101,27 @@ app.post('/api/resume-workflow', async (req, res) => {
             console.log('n8n parsed response:', data);
             res.json(data);
         } catch (parseError) {
-            console.log('Failed to parse JSON, returning text response');
-            // If it's not JSON, return the text as a message
-            res.json({ success: true, message: responseText, raw: true });
+                console.log('Failed to parse JSON, returning text response');
+                // If it's not JSON, return the text as a message
+                res.json({ success: true, message: responseText, raw: true });
+            }
+            
+        } catch (error) {
+            console.error('Error resuming workflow:', error.message);
+            res.status(500).json({
+                success: false,
+                error: `Failed to resume workflow: ${error.message}`
+            });
         }
-        
-    } catch (error) {
-        console.error('Error resuming workflow:', error.message);
+    });
+    
+    req.on('error', (error) => {
+        console.error('Request stream error:', error);
         res.status(500).json({
             success: false,
-            error: `Failed to resume workflow: ${error.message}`
+            error: 'Failed to read request body'
         });
-    }
+    });
 });
 
 // Health check endpoint
