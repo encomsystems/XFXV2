@@ -69,13 +69,35 @@ app.post('/api/resume-workflow', async (req, res) => {
             headers: headers
         });
         
+        console.log('n8n response status:', response.status);
+        console.log('n8n response headers:', Object.fromEntries(response.headers.entries()));
+        
         if (!response.ok) {
-            throw new Error(`n8n responded with status: ${response.status}`);
+            const errorText = await response.text();
+            console.log('n8n error response:', errorText);
+            throw new Error(`n8n responded with status: ${response.status} - ${errorText}`);
         }
         
-        const data = await response.json();
-        console.log('n8n response:', data);
-        res.json(data);
+        // Get response as text first to check if it's valid JSON
+        const responseText = await response.text();
+        console.log('n8n raw response:', responseText);
+        
+        if (!responseText.trim()) {
+            // Empty response - treat as success
+            console.log('Empty response from n8n, treating as success');
+            res.json({ success: true, message: 'File uploaded successfully' });
+            return;
+        }
+        
+        try {
+            const data = JSON.parse(responseText);
+            console.log('n8n parsed response:', data);
+            res.json(data);
+        } catch (parseError) {
+            console.log('Failed to parse JSON, returning text response');
+            // If it's not JSON, return the text as a message
+            res.json({ success: true, message: responseText, raw: true });
+        }
         
     } catch (error) {
         console.error('Error resuming workflow:', error.message);
