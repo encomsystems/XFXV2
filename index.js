@@ -13,11 +13,9 @@ app.post('/api/start-workflow', async (req, res) => {
     
     try {
         // This would be your actual n8n webhook URL
-        const n8nWebhookUrl = 'http://localhost:5678/webhook/start-invoice-process';
+        const n8nWebhookUrl = 'http://localhost:5678/webhook-test/invoice-postman';
         
-        // For demo purposes, we'll simulate the n8n response
-        // In real implementation, you would make a fetch request to n8n
-        /*
+        // Make actual request to n8n webhook
         const response = await fetch(n8nWebhookUrl, {
             method: 'POST',
             headers: {
@@ -28,17 +26,6 @@ app.post('/api/start-workflow', async (req, res) => {
         
         const data = await response.json();
         res.json(data);
-        */
-        
-        // Simulated response for demo
-        setTimeout(() => {
-            res.json({
-                success: true,
-                resumeUrl: 'http://localhost:5678/webhook-waiting/177',
-                trackingId: '0e40e2e4-b318-4894-9e1c-68ddbf89de10',
-                message: 'Workflow started successfully'
-            });
-        }, 2000);
         
     } catch (error) {
         console.error('Error starting workflow:', error);
