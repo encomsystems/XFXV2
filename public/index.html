@@ -1224,16 +1224,16 @@
             addLog('📊 Requesting processing details from n8n...');
 
             try {
+                // Create form data to trigger the wait node properly
+                const formData = new FormData();
+                formData.append('action', 'get_details');
+                formData.append('timestamp', new Date().toISOString());
+                formData.append('step', 'ksef_processing');
+
                 // Send get details request to n8n workflow
                 const response = await fetch(`/api/resume-workflow?resumeUrl=${encodeURIComponent(resumeUrl)}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'get_details',
-                        timestamp: new Date().toISOString()
-                    })
+                    body: formData
                 });
 
                 const data = await response.json();
@@ -1245,7 +1245,7 @@
                 addLog(`📊 HTTP Status: ${response.status}`);
                 addLog(`📄 Response Data: ${JSON.stringify(data, null, 2)}`);
 
-                if (data.success) {
+                if (data.success || response.status === 200) {
                     addLog('✅ Processing details retrieved successfully');
                     
                     // Hide loader and show success result
@@ -1260,7 +1260,14 @@
                     }
                 } else {
                     addLog('❌ Failed to get processing details');
-                    addLog(`Error: ${data.error}`);
+                    addLog(`Error: ${data.error || 'Unknown error'}`);
+                    
+                    // Re-enable button on error
+                    const getDetailsBtn = document.getElementById('getDetailsBtn');
+                    if (getDetailsBtn) {
+                        getDetailsBtn.disabled = false;
+                        getDetailsBtn.textContent = 'Get Processing Details';
+                    }
                 }
                 addLog('='.repeat(50));
 
