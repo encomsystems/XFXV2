@@ -1417,6 +1417,9 @@
                     // Handle different response formats from n8n
                     if (data.data && Array.isArray(data.data)) {
                         ksefData = data.data[0];
+                    } else if (data.data && data.data.ksefSubmissionStatus) {
+                        // Direct data object with KSEF status
+                        ksefData = data.data;
                     } else if (Array.isArray(data)) {
                         ksefData = data[0];
                     } else if (data.message && typeof data.message === 'string') {
@@ -1425,6 +1428,8 @@
                             const parsedMessage = JSON.parse(data.message);
                             if (Array.isArray(parsedMessage)) {
                                 ksefData = parsedMessage[0];
+                            } else if (parsedMessage.ksefSubmissionStatus) {
+                                ksefData = parsedMessage;
                             }
                         } catch (e) {
                             addLog('⚠️ Could not parse message as JSON');
