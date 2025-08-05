@@ -24,8 +24,27 @@ app.post('/api/start-workflow', async (req, res) => {
             body: JSON.stringify(req.body)
         });
         
-        const data = await response.json();
-        res.json(data);
+        // LOG START WORKFLOW RESPONSE
+        console.log('=================================');
+        console.log('🚀 N8N START WORKFLOW RESPONSE');
+        console.log('=================================');
+        console.log('📍 Webhook URL:', n8nWebhookUrl);
+        console.log('📊 Response Status:', response.status);
+        console.log('📋 Response Headers:', JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
+        
+        const responseText = await response.text();
+        console.log('📄 Raw Response:', responseText);
+        
+        try {
+            const data = JSON.parse(responseText);
+            console.log('✅ PARSED START WORKFLOW RESPONSE:');
+            console.log(JSON.stringify(data, null, 2));
+            res.json(data);
+        } catch (parseError) {
+            console.log('❌ Failed to parse start workflow JSON:', parseError.message);
+            res.json({ success: false, error: 'Invalid JSON response from n8n', raw: responseText });
+        }
+        console.log('=================================');
         
     } catch (error) {
         console.error('Error starting workflow:', error);
@@ -47,8 +66,15 @@ app.post('/api/resume-workflow', (req, res) => {
         });
     }
     
-    console.log('Resuming workflow at:', resumeUrl);
-    console.log('Content-Type:', req.headers['content-type']);
+    console.log('=================================');
+    console.log('📤 SENDING REQUEST TO N8N');
+    console.log('=================================');
+    console.log('📍 Resume URL:', resumeUrl);
+    console.log('📋 Request Headers:', JSON.stringify({
+        'Content-Type': req.headers['content-type'],
+        'Content-Length': req.headers['content-length'],
+        'User-Agent': req.headers['user-agent']
+    }, null, 2));
     
     // Create headers object
     const headers = {};
@@ -87,32 +113,46 @@ app.post('/api/resume-workflow', (req, res) => {
         
         // Get response as text first to check if it's valid JSON
         const responseText = await response.text();
-        console.log('n8n raw response:', responseText);
+        
+        // LOG ALL N8N RESPONSES
+        console.log('=================================');
+        console.log('📨 N8N RESPONSE RECEIVED');
+        console.log('=================================');
+        console.log('📍 Response URL:', resumeUrl);
+        console.log('📊 Response Status:', response.status);
+        console.log('📋 Response Headers:', JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
+        console.log('📄 Raw Response Body:', responseText);
+        console.log('📏 Response Length:', responseText.length);
+        console.log('=================================');
         
         if (!responseText.trim()) {
             // Empty response - treat as success
-            console.log('Empty response from n8n, treating as success');
+            console.log('⚠️  Empty response from n8n, treating as success');
             res.json({ success: true, message: 'File uploaded successfully' });
             return;
         }
         
         try {
             const data = JSON.parse(responseText);
-            console.log('n8n parsed response:', data);
+            console.log('✅ N8N PARSED JSON RESPONSE:');
+            console.log(JSON.stringify(data, null, 2));
             
             // Check if the response contains XFX API response data
             if (data.response) {
-                console.log('XFX API response detected:', data.response);
+                console.log('🎯 XFX API RESPONSE DETECTED:');
+                console.log(JSON.stringify(data.response, null, 2));
                 res.json({
                     success: true,
                     message: 'Invoice processed',
                     response: data.response
                 });
             } else {
+                console.log('📤 Sending parsed data to frontend');
                 res.json(data);
             }
         } catch (parseError) {
-                console.log('Failed to parse JSON, returning text response');
+                console.log('❌ Failed to parse JSON response:', parseError.message);
+                console.log('📝 Returning raw text response');
                 // If it's not JSON, return the text as a message
                 res.json({ success: true, message: responseText, raw: true });
             }
