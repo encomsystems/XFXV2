@@ -802,6 +802,10 @@
             } else if (stepNumber === 3) {
                 document.getElementById('processingResultsStep').classList.remove('hidden');
                 updateStatusItem('processing-status', 'current');
+            } else if (stepNumber === 4) {
+                document.getElementById('processingResultsStep').classList.remove('hidden');
+                updateStatusItem('processing-status', 'complete');
+                updateStatusItem('processed-status', 'current');
             }
             
             currentStep = stepNumber;
@@ -905,37 +909,27 @@
                     
                     addLog('Processing invoice through XFX API...');
                     
-                    // Move to processing step
-                    setTimeout(() => {
-                        showStep(3);
-                        
-                        // Check if we have XFX API response data
-                        if (data.response) {
-                            // Response is nested in 'response' field
-                            addLog('XFX API response received (nested)');
-                            console.log('Full XFX response:', data.response);
-                            displayProcessingResult(data.response);
-                        } else if (data.dateReceivedUtc && data.xfxTrackingId && data.invoiceNo) {
-                            // Direct XFX API response format
-                            addLog('XFX API response received (direct)');
-                            console.log('Full XFX response:', data);
-                            displayProcessingResult(data);
-                        } else if (data.success !== false) {
-                            // Check if there's any other response data to display
-                            addLog('Response received from n8n webhook');
-                            console.log('Full n8n response:', data);
+                    // Check if we have immediate XFX API response data
+                    const hasXfxResponse = data.response || (data.dateReceivedUtc && data.xfxTrackingId && data.invoiceNo);
+                    
+                    if (hasXfxResponse) {
+                        // We have the XFX response, go directly to step 4 with results
+                        setTimeout(() => {
+                            showStep(3);
+                            updateStatusItem('processing-status', 'complete'); // Mark processing as complete
                             
-                            // If there's any meaningful data, show it immediately
-                            if (data.message || data.raw || Object.keys(data).length > 1) {
-                                displayProcessingResult(data);
-                            } else {
-                                // No response data yet, keep showing loader
-                                addLog('Waiting for XFX API response...');
-                            }
-                        } else {
-                            addLog('Waiting for XFX API response...');
-                        }
-                    }, 1000);
+                            const xfxData = data.response || data;
+                            addLog('XFX API response received');
+                            console.log('Full XFX response:', xfxData);
+                            displayProcessingResult(xfxData);
+                        }, 1000);
+                    } else {
+                        // No XFX response yet, show processing step with loader
+                        setTimeout(() => {
+                            showStep(3);
+                            addLog('Processing invoice through XFX API...');
+                        }, 1000);
+                    }
                     
                     // If there's a new resumeUrl, update it
                     if (data.resumeUrl) {
@@ -985,7 +979,7 @@
         });
 
         function displayProcessingResult(responseData) {
-            // Hide loader
+            // Hide loader and ensure we're on the right step
             document.getElementById('processingLoader').style.display = 'none';
             
             addLog('Processing result received from XFX API');
@@ -997,13 +991,20 @@
                 updateStatusItem('processing-status', 'current');
                 addLog(`Processing failed: ${responseData.errorMessage || responseData.error}`, 'error');
             } else {
-                // Success response
+                // Success response - show step 4 with results
                 displaySuccessResult(responseData);
                 updateStatusItem('processing-status', 'complete');
                 updateStatusItem('processed-status', 'complete');
-                addLog('Invoice processed successfully!');
-                addLog(`Invoice Number: ${responseData.invoiceNo || 'N/A'}`);
-                addLog(`XFX Tracking ID: ${responseData.xfxTrackingId || 'N/A'}`);
+                
+                // Change the step title to show completion
+                const stepTitle = document.querySelector('#processingResultsStep h2');
+                stepTitle.textContent = 'Invoice Processing Complete';
+                const stepSubtitle = document.querySelector('#processingResultsStep .subtitle');
+                stepSubtitle.textContent = 'Your invoice has been successfully processed';
+                
+                addLog('✅ Invoice processed successfully!');
+                addLog(`📄 Invoice Number: ${responseData.invoiceNo}`);
+                addLog(`🔍 XFX Tracking ID: ${responseData.xfxTrackingId}`);
             }
         }
 
