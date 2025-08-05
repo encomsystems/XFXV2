@@ -1015,16 +1015,11 @@
                             updateStatusItem('processing-status', 'current');
                             displaySuccessResult(data.response);
                             
-                            // Wait 3 seconds then automatically continue to Step 5
-                            setTimeout(async () => {
-                                addLog('⏭️ Continuing to KSEF processing...');
-                                showStep(5);
-                                updateStatusItem('processing-status', 'complete');
-                                updateStatusItem('ksef-processing-status', 'current');
-                                
-                                // Automatically continue the workflow
-                                await continueToKsefProcessing();
-                            }, 3000);
+                            // Add continue button instead of automatic processing
+                            setTimeout(() => {
+                                addLog('✅ Ready to continue to KSEF processing');
+                                addContinueButton();
+                            }, 1000);
                         } else {
                             addLog('⏳ Waiting for XFX API response...');
                             // Go to step 4 anyway but show loading
@@ -1150,6 +1145,37 @@
             addLog(`🏷️ External Tracking ID: ${data.externalTrackingId}`);
             addLog(`🔍 XFX Tracking ID: ${data.xfxTrackingId}`);
             addLog(`📅 Date Received: ${new Date(data.dateReceivedUtc).toLocaleString()}`);
+        }
+
+        function addContinueButton() {
+            // Check if button already exists
+            if (document.getElementById('continueKsefBtn')) {
+                return;
+            }
+
+            const successResult = document.getElementById('successResult');
+            const resultDetails = successResult.querySelector('.result-details');
+            
+            const continueButton = document.createElement('button');
+            continueButton.id = 'continueKsefBtn';
+            continueButton.className = 'start-btn';
+            continueButton.style.marginTop = '20px';
+            continueButton.textContent = 'Continue to KSEF Processing';
+            continueButton.onclick = async () => {
+                continueButton.disabled = true;
+                continueButton.textContent = 'Processing...';
+                
+                addLog('⏭️ User initiated KSEF processing...');
+                showStep(5);
+                updateStatusItem('processing-status', 'complete');
+                updateStatusItem('ksef-processing-status', 'current');
+                
+                // Continue the workflow
+                await continueToKsefProcessing();
+            };
+            
+            resultDetails.appendChild(continueButton);
+            addLog('🔘 Continue button added - Click to proceed to KSEF processing');
         }
 
         function displayErrorResult(data) {
