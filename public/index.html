@@ -911,9 +911,18 @@
                         
                         // Check if we have API response data
                         if (data.response && Array.isArray(data.response) && data.response.length > 0) {
+                            // Wait a bit to show the processing loader, then show results
                             setTimeout(() => {
                                 displayProcessingResult(data.response[0]);
-                            }, 1500);
+                            }, 2000);
+                        } else if (data.response && !Array.isArray(data.response)) {
+                            // Handle single response object
+                            setTimeout(() => {
+                                displayProcessingResult(data.response);
+                            }, 2000);
+                        } else {
+                            // No response data yet, keep showing loader
+                            addLog('Waiting for XFX API response...');
                         }
                     }, 1000);
                     
@@ -968,31 +977,40 @@
             // Hide loader
             document.getElementById('processingLoader').style.display = 'none';
             
-            if (responseData.error) {
+            addLog('Processing result received from XFX API');
+            console.log('Response data:', responseData);
+            
+            if (responseData.error || responseData.errorCode) {
                 // Error response
                 displayErrorResult(responseData);
                 updateStatusItem('processing-status', 'current');
-                addLog(`Processing failed: ${responseData.errorMessage}`, 'error');
+                addLog(`Processing failed: ${responseData.errorMessage || responseData.error}`, 'error');
             } else {
                 // Success response
                 displaySuccessResult(responseData);
                 updateStatusItem('processing-status', 'complete');
                 updateStatusItem('processed-status', 'complete');
                 addLog('Invoice processed successfully!');
+                addLog(`Invoice Number: ${responseData.invoiceNo || 'N/A'}`);
+                addLog(`XFX Tracking ID: ${responseData.xfxTrackingId || 'N/A'}`);
             }
         }
 
         function displaySuccessResult(data) {
             const successResult = document.getElementById('successResult');
             
-            // Update success details
+            // Update success details with better data handling
+            const dateReceived = data.dateReceivedUtc || data.dateReceived || new Date().toISOString();
             document.getElementById('dateReceived').textContent = 
-                new Date(data.dateReceivedUtc).toLocaleString();
-            document.getElementById('invoiceNumber').textContent = data.invoiceNo || '-';
-            document.getElementById('externalTrackingId').textContent = data.externalTrackingId || '-';
-            document.getElementById('xfxTrackingId').textContent = data.xfxTrackingId || '-';
+                new Date(dateReceived).toLocaleString();
+            document.getElementById('invoiceNumber').textContent = data.invoiceNo || data.invoiceNumber || '-';
+            document.getElementById('externalTrackingId').textContent = data.externalTrackingId || data.externalId || '-';
+            document.getElementById('xfxTrackingId').textContent = data.xfxTrackingId || data.trackingId || '-';
             
             successResult.classList.remove('hidden');
+            
+            // Log the successful processing
+            addLog('✅ Invoice processing completed successfully');
         }
 
         function displayErrorResult(data) {
