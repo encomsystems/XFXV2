@@ -801,8 +801,6 @@
                 updateStatusItem('upload-invoice-status', 'current');
             } else if (stepNumber === 3) {
                 document.getElementById('processingResultsStep').classList.remove('hidden');
-                updateStatusItem('upload-invoice-status', 'complete');
-                updateStatusItem('sending-invoice-status', 'complete');
                 updateStatusItem('processing-status', 'current');
             }
             
@@ -900,6 +898,11 @@
                 if (data.success !== false) {
                     success.classList.add('show');
                     addLog('Invoice uploaded successfully to n8n');
+                    
+                    // Update status to show step 3 is complete (Sending Invoice)
+                    updateStatusItem('upload-invoice-status', 'complete');
+                    updateStatusItem('sending-invoice-status', 'complete');
+                    
                     addLog('Processing invoice through XFX API...');
                     
                     // Move to processing step
