@@ -909,13 +909,17 @@
                     setTimeout(() => {
                         showStep(3);
                         
-                        // Check if we have API response data from XFX
+                        // Check if we have XFX API response data
                         if (data.response) {
-                            addLog('XFX API response received');
+                            // Response is nested in 'response' field
+                            addLog('XFX API response received (nested)');
                             console.log('Full XFX response:', data.response);
-                            
-                            // Show results immediately without delay
                             displayProcessingResult(data.response);
+                        } else if (data.dateReceivedUtc && data.xfxTrackingId && data.invoiceNo) {
+                            // Direct XFX API response format
+                            addLog('XFX API response received (direct)');
+                            console.log('Full XFX response:', data);
+                            displayProcessingResult(data);
                         } else if (data.success !== false) {
                             // Check if there's any other response data to display
                             addLog('Response received from n8n webhook');
@@ -1006,10 +1010,10 @@
         function displaySuccessResult(data) {
             const successResult = document.getElementById('successResult');
             
-            // Handle XFX API response format
+            // Handle XFX API response format exactly as provided
             console.log('Displaying success result for:', data);
             
-            // Update success details with XFX API response format
+            // Update success details with exact XFX API response format
             const dateReceived = data.dateReceivedUtc || data.dateReceived || new Date().toISOString();
             document.getElementById('dateReceived').textContent = 
                 new Date(dateReceived).toLocaleString();
@@ -1019,12 +1023,12 @@
             
             successResult.classList.remove('hidden');
             
-            // Log the successful processing with details
+            // Log the successful processing with exact details
             addLog('✅ Invoice processing completed successfully');
-            addLog(`📄 Invoice Number: ${data.invoiceNo || 'N/A'}`);
-            addLog(`🏷️ External ID: ${data.externalTrackingId || 'N/A'}`);
-            addLog(`🔍 XFX Tracking ID: ${data.xfxTrackingId || 'N/A'}`);
-            addLog(`📅 Date Received: ${new Date(dateReceived).toLocaleString()}`);
+            addLog(`📄 Invoice Number: ${data.invoiceNo}`);
+            addLog(`🏷️ External Tracking ID: ${data.externalTrackingId}`);
+            addLog(`🔍 XFX Tracking ID: ${data.xfxTrackingId}`);
+            addLog(`📅 Date Received: ${new Date(data.dateReceivedUtc).toLocaleString()}`);
         }
 
         function displayErrorResult(data) {
