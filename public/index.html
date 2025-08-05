@@ -1475,7 +1475,7 @@
                         // Wait and try again
                         setTimeout(() => {
                             requestKsefStatus(retryCount);
-                        }, 10000);
+                        }, 15000);
                     }
                 } else {
                     addLog(`❌ Failed to get processing details`);
@@ -1487,10 +1487,10 @@
                             addLog('❌ Maximum retry attempts reached for non-JSON response.');
                             return;
                         }
-                        addLog('🔄 Received non-JSON response, retrying in 10 seconds...');
+                        addLog('🔄 Received non-JSON response, retrying in 15 seconds...');
                         setTimeout(() => {
                             requestKsefStatus(retryCount + 1);
-                        }, 10000);
+                        }, 15000);
                     }
                 }
                 addLog('='.repeat(50));
@@ -1504,10 +1504,10 @@
                         addLog('❌ Maximum retry attempts reached for network error.');
                         return;
                     }
-                    addLog('🔄 Network error, retrying in 10 seconds...');
+                    addLog('🔄 Network error, retrying in 15 seconds...');
                     setTimeout(() => {
                         requestKsefStatus(retryCount + 1);
-                    }, 10000);
+                    }, 15000);
                 } else if (error.message.includes('409')) {
                     if (retryCount >= maxRetries) {
                         addLog('❌ Maximum retry attempts reached for 409 conflict.');
