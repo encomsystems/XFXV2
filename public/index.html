@@ -610,6 +610,14 @@
                         <p>Receiving confirmation from XFX</p>
                     </div>
                 </div>
+
+                <div class="status-item pending" id="ksef-processing-status">
+                    <div class="status-icon pending">5</div>
+                    <div class="status-text">
+                        <h3>Invoice Processing</h3>
+                        <p>Processing in KSEF system gate</p>
+                    </div>
+                </div>
             </div>
 
             <!-- Step 1: Start Process -->
@@ -729,6 +737,55 @@
                     <div class="spinner"></div>
                     <p>Processing invoice through XFX API...</p>
                 </div>
+
+                <!-- KSEF Processing Loader -->
+                <div class="processing-loader hidden" id="ksefProcessingLoader">
+                    <div class="spinner"></div>
+                    <p>Processing invoice in KSEF system gate...</p>
+                </div>
+            </div>
+
+            <!-- Step 5: KSEF Processing -->
+            <div class="step-container hidden" id="ksefProcessingStep">
+                <h2>Invoice Processing</h2>
+                <p class="subtitle">Processing in KSEF system gate</p>
+
+                <!-- KSEF Success Result -->
+                <div class="processing-result success hidden" id="ksefSuccessResult">
+                    <div class="result-header">
+                        <div class="result-icon success">✓</div>
+                        <h3>Invoice Processed Successfully in KSEF</h3>
+                    </div>
+
+                    <div class="result-details">
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>KSEF Processing Status</label>
+                                <span id="ksefStatus">Completed</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>System Gateway</label>
+                                <span id="systemGateway">KSEF</span>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>Processing Date</label>
+                                <span id="processingDate">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Final Status</label>
+                                <span id="finalStatus">Processed</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KSEF Processing Loader -->
+                <div class="processing-loader" id="ksefLoader">
+                    <div class="spinner"></div>
+                    <p>Processing invoice in KSEF system gate...</p>
+                </div>
             </div></div>
         </div>
 
@@ -781,6 +838,7 @@
             document.getElementById('startProcessStep').classList.add('hidden');
             document.getElementById('uploadInvoiceStep').classList.add('hidden');
             document.getElementById('processingResultsStep').classList.add('hidden');
+            document.getElementById('ksefProcessingStep').classList.add('hidden');
 
             // Show current step
             if (stepNumber === 1) {
@@ -794,6 +852,7 @@
                 // Step 3: Sending Invoice - show processing results step with loader
                 document.getElementById('processingResultsStep').classList.remove('hidden');
                 document.getElementById('processingLoader').style.display = 'block';
+                document.getElementById('ksefProcessingLoader').classList.add('hidden');
                 document.getElementById('successResult').classList.add('hidden');
                 document.getElementById('errorResult').classList.add('hidden');
                 
@@ -806,12 +865,18 @@
                 // Step 4: Acceptance of The Invoice for processing
                 document.getElementById('processingResultsStep').classList.remove('hidden');
                 document.getElementById('processingLoader').style.display = 'none';
+                document.getElementById('ksefProcessingLoader').classList.remove('hidden');
                 
                 // Update step title for acceptance
                 const stepTitle = document.querySelector('#processingResultsStep h2');
                 stepTitle.textContent = 'Acceptance of The Invoice for processing';
                 const stepSubtitle = document.querySelector('#processingResultsStep .subtitle');
                 stepSubtitle.textContent = 'Receiving confirmation from XFX';
+            } else if (stepNumber === 5) {
+                // Step 5: KSEF Processing
+                document.getElementById('ksefProcessingStep').classList.remove('hidden');
+                document.getElementById('ksefLoader').style.display = 'block';
+                document.getElementById('ksefSuccessResult').classList.add('hidden');
             }
 
             currentStep = stepNumber;
@@ -943,13 +1008,23 @@
                         if (data.response) {
                             addLog('🎯 XFX API RESPONSE DETECTED:');
                             addLog(JSON.stringify(data.response, null, 2));
-                            addLog('Processing complete - showing results');
                             
                             // Go to Step 4: Acceptance of The Invoice for processing
                             showStep(4);
                             updateStatusItem('sending-invoice-status', 'complete');
-                            updateStatusItem('processing-status', 'complete');
+                            updateStatusItem('processing-status', 'current');
                             displaySuccessResult(data.response);
+                            
+                            // Wait 3 seconds then automatically continue to Step 5
+                            setTimeout(async () => {
+                                addLog('⏭️ Continuing to KSEF processing...');
+                                showStep(5);
+                                updateStatusItem('processing-status', 'complete');
+                                updateStatusItem('ksef-processing-status', 'current');
+                                
+                                // Automatically continue the workflow
+                                await continueToKsefProcessing();
+                            }, 3000);
                         } else {
                             addLog('⏳ Waiting for XFX API response...');
                             // Go to step 4 anyway but show loading
@@ -1111,10 +1186,78 @@
             }
         }
 
+        async function continueToKsefProcessing() {
+            if (!resumeUrl) {
+                addLog('❌ No resume URL available for KSEF processing');
+                return;
+            }
+
+            addLog('🏭 Starting KSEF system gate processing...');
+
+            try {
+                // Continue the n8n workflow by calling the resume URL again
+                const response = await fetch(`/api/resume-workflow?resumeUrl=${encodeURIComponent(resumeUrl)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'continue_ksef_processing',
+                        timestamp: new Date().toISOString()
+                    })
+                });
+
+                const data = await response.json();
+
+                // LOG KSEF PROCESSING RESPONSE
+                addLog('='.repeat(50));
+                addLog('🏭 KSEF PROCESSING RESPONSE');
+                addLog('='.repeat(50));
+                addLog(`📊 HTTP Status: ${response.status}`);
+                addLog(`📄 Response Data: ${JSON.stringify(data, null, 2)}`);
+
+                if (data.success) {
+                    addLog('✅ KSEF processing completed successfully');
+                    
+                    // Show success result
+                    document.getElementById('ksefLoader').style.display = 'none';
+                    displayKsefSuccessResult(data);
+                    updateStatusItem('ksef-processing-status', 'complete');
+                } else {
+                    addLog('❌ KSEF processing failed');
+                    addLog(`Error: ${data.error}`);
+                }
+                addLog('='.repeat(50));
+
+            } catch (error) {
+                addLog(`❌ KSEF processing error: ${error.message}`, 'error');
+                document.getElementById('ksefLoader').style.display = 'none';
+            }
+        }
+
+        function displayKsefSuccessResult(data = {}) {
+            const ksefSuccessResult = document.getElementById('ksefSuccessResult');
+
+            // Update KSEF processing details
+            document.getElementById('ksefStatus').textContent = 'Completed';
+            document.getElementById('systemGateway').textContent = 'KSEF';
+            document.getElementById('processingDate').textContent = new Date().toLocaleString();
+            document.getElementById('finalStatus').textContent = 'Processed';
+
+            ksefSuccessResult.classList.remove('hidden');
+
+            // Log the successful KSEF processing
+            addLog('✅ Invoice processed successfully in KSEF system gate');
+            addLog('🏭 System Gateway: KSEF');
+            addLog('📅 Processing completed at: ' + new Date().toLocaleString());
+            addLog('🎉 Full invoice processing workflow completed!');
+        }
+
         function retryUpload() {
             // Reset state and go back to upload step
             document.getElementById('successResult').classList.add('hidden');
             document.getElementById('errorResult').classList.add('hidden');
+            document.getElementById('ksefSuccessResult').classList.add('hidden');
             document.getElementById('processingLoader').style.display = 'block';
 
             showStep(2);
