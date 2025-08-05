@@ -606,16 +606,8 @@
                 <div class="status-item pending" id="processing-status">
                     <div class="status-icon pending">4</div>
                     <div class="status-text">
-                        <h3>Invoice Processing</h3>
-                        <p>Waiting for receiving confirmation</p>
-                    </div>
-                </div>
-
-                <div class="status-item pending" id="processed-status">
-                    <div class="status-icon pending">5</div>
-                    <div class="status-text">
-                        <h3>Invoice Processed</h3>
-                        <p>Status of invoice</p>
+                        <h3>Acceptance of The Invoice for processing</h3>
+                        <p>Receiving confirmation from XFX</p>
                     </div>
                 </div>
             </div>
@@ -799,12 +791,27 @@
                 updateStatusItem('start-process-status', 'complete');
                 updateStatusItem('upload-invoice-status', 'current');
             } else if (stepNumber === 3) {
+                // Step 3: Sending Invoice - show processing results step with loader
                 document.getElementById('processingResultsStep').classList.remove('hidden');
-                updateStatusItem('processing-status', 'current');
+                document.getElementById('processingLoader').style.display = 'block';
+                document.getElementById('successResult').classList.add('hidden');
+                document.getElementById('errorResult').classList.add('hidden');
+                
+                // Update step title for sending
+                const stepTitle = document.querySelector('#processingResultsStep h2');
+                stepTitle.textContent = 'Sending Invoice';
+                const stepSubtitle = document.querySelector('#processingResultsStep .subtitle');
+                stepSubtitle.textContent = 'Accessing XFX API';
             } else if (stepNumber === 4) {
+                // Step 4: Acceptance of The Invoice for processing
                 document.getElementById('processingResultsStep').classList.remove('hidden');
-                updateStatusItem('processing-status', 'complete');
-                updateStatusItem('processed-status', 'current');
+                document.getElementById('processingLoader').style.display = 'none';
+                
+                // Update step title for acceptance
+                const stepTitle = document.querySelector('#processingResultsStep h2');
+                stepTitle.textContent = 'Acceptance of The Invoice for processing';
+                const stepSubtitle = document.querySelector('#processingResultsStep .subtitle');
+                stepSubtitle.textContent = 'Receiving confirmation from XFX';
             }
 
             currentStep = stepNumber;
@@ -897,11 +904,9 @@
 
             const uploadBtn = document.getElementById('uploadBtn');
             const loading = document.getElementById('uploadLoading');
-            const processingLoader = document.getElementById('processingLoader');
 
             uploadBtn.disabled = true;
             loading.style.display = 'block';
-            processingLoader.style.display = 'block';
 
             addLog('📤 Starting file upload...');
 
@@ -925,22 +930,34 @@
 
                 if (data.success) {
                     addLog('✅ File uploaded successfully');
-
-                    // Check if this response contains XFX API data
-                    if (data.response) {
-                        addLog('🎯 XFX API RESPONSE DETECTED:');
-                        addLog(JSON.stringify(data.response, null, 2));
-                        addLog('Processing complete - showing results');
-                        displaySuccessResult(data.response);
-                        showStep(4);
-                        updateStatusItem('processed-status', 'complete');
-                    } else if (data.raw) {
-                        addLog('📝 RAW TEXT RESPONSE:');
-                        addLog(data.message);
-                    } else {
-                        addLog('⏳ File uploaded, waiting for processing...');
-                        addLog(`📋 Full response: ${JSON.stringify(data, null, 2)}`);
-                    }
+                    
+                    // Go to Step 3: Sending Invoice
+                    showStep(3);
+                    updateStatusItem('upload-invoice-status', 'complete');
+                    updateStatusItem('sending-invoice-status', 'current');
+                    
+                    addLog('📡 Sending invoice to XFX API...');
+                    
+                    // Wait 3 seconds before checking for response and going to step 4
+                    setTimeout(() => {
+                        if (data.response) {
+                            addLog('🎯 XFX API RESPONSE DETECTED:');
+                            addLog(JSON.stringify(data.response, null, 2));
+                            addLog('Processing complete - showing results');
+                            
+                            // Go to Step 4: Acceptance of The Invoice for processing
+                            showStep(4);
+                            updateStatusItem('sending-invoice-status', 'complete');
+                            updateStatusItem('processing-status', 'complete');
+                            displaySuccessResult(data.response);
+                        } else {
+                            addLog('⏳ Waiting for XFX API response...');
+                            // Go to step 4 anyway but show loading
+                            showStep(4);
+                            updateStatusItem('sending-invoice-status', 'complete');
+                            updateStatusItem('processing-status', 'current');
+                        }
+                    }, 3000);
 
                     // Update resume URL if provided
                     if (data.resumeUrl) {
@@ -1011,15 +1028,8 @@
                 // Success response - show step 4 with results
                 displaySuccessResult(responseData);
                 updateStatusItem('processing-status', 'complete');
-                updateStatusItem('processed-status', 'complete');
 
-                // Change the step title to show completion
-                const stepTitle = document.querySelector('#processingResultsStep h2');
-                stepTitle.textContent = 'Invoice Processing Complete';
-                const stepSubtitle = document.querySelector('#processingResultsStep .subtitle');
-                stepSubtitle.textContent = 'Your invoice has been successfully processed';
-
-                addLog('✅ Invoice processed successfully!');
+                addLog('✅ Invoice accepted for processing successfully!');
                 addLog(`📄 Invoice Number: ${responseData.invoiceNo}`);
                 addLog(`🔍 XFX Tracking ID: ${responseData.xfxTrackingId}`);
             }
