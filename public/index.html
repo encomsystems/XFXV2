@@ -1015,11 +1015,16 @@
                             updateStatusItem('processing-status', 'current');
                             displaySuccessResult(data.response);
                             
-                            // Add continue button instead of automatic processing
+                            // Wait 3 seconds then automatically go to Step 5
                             setTimeout(() => {
-                                addLog('✅ Ready to continue to KSEF processing');
-                                addContinueButton();
-                            }, 1000);
+                                addLog('⏭️ Proceeding to KSEF processing...');
+                                showStep(5);
+                                updateStatusItem('processing-status', 'complete');
+                                updateStatusItem('ksef-processing-status', 'current');
+                                
+                                // Add button in Step 5 for getting details
+                                addGetDetailsButton();
+                            }, 3000);
                         } else {
                             addLog('⏳ Waiting for XFX API response...');
                             // Go to step 4 anyway but show loading
@@ -1147,35 +1152,33 @@
             addLog(`📅 Date Received: ${new Date(data.dateReceivedUtc).toLocaleString()}`);
         }
 
-        function addContinueButton() {
+        function addGetDetailsButton() {
             // Check if button already exists
-            if (document.getElementById('continueKsefBtn')) {
+            if (document.getElementById('getDetailsBtn')) {
                 return;
             }
 
-            const successResult = document.getElementById('successResult');
-            const resultDetails = successResult.querySelector('.result-details');
+            const ksefStep = document.getElementById('ksefProcessingStep');
+            const ksefLoader = document.getElementById('ksefLoader');
             
-            const continueButton = document.createElement('button');
-            continueButton.id = 'continueKsefBtn';
-            continueButton.className = 'start-btn';
-            continueButton.style.marginTop = '20px';
-            continueButton.textContent = 'Continue to KSEF Processing';
-            continueButton.onclick = async () => {
-                continueButton.disabled = true;
-                continueButton.textContent = 'Processing...';
+            const getDetailsButton = document.createElement('button');
+            getDetailsButton.id = 'getDetailsBtn';
+            getDetailsButton.className = 'start-btn';
+            getDetailsButton.style.marginTop = '20px';
+            getDetailsButton.textContent = 'Get Processing Details';
+            getDetailsButton.onclick = async () => {
+                getDetailsButton.disabled = true;
+                getDetailsButton.textContent = 'Getting Details...';
                 
-                addLog('⏭️ User initiated KSEF processing...');
-                showStep(5);
-                updateStatusItem('processing-status', 'complete');
-                updateStatusItem('ksef-processing-status', 'current');
+                addLog('📊 User requested processing details...');
                 
-                // Continue the workflow
-                await continueToKsefProcessing();
+                // Send get details request to n8n
+                await getProcessingDetails();
             };
             
-            resultDetails.appendChild(continueButton);
-            addLog('🔘 Continue button added - Click to proceed to KSEF processing');
+            // Insert button after the loader
+            ksefLoader.parentNode.insertBefore(getDetailsButton, ksefLoader.nextSibling);
+            addLog('🔘 Get Details button added - Click to retrieve processing information');
         }
 
         function displayErrorResult(data) {
@@ -1212,52 +1215,64 @@
             }
         }
 
-        async function continueToKsefProcessing() {
+        async function getProcessingDetails() {
             if (!resumeUrl) {
-                addLog('❌ No resume URL available for KSEF processing');
+                addLog('❌ No resume URL available for getting details');
                 return;
             }
 
-            addLog('🏭 Starting KSEF system gate processing...');
+            addLog('📊 Requesting processing details from n8n...');
 
             try {
-                // Continue the n8n workflow by calling the resume URL again
+                // Send get details request to n8n workflow
                 const response = await fetch(`/api/resume-workflow?resumeUrl=${encodeURIComponent(resumeUrl)}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        action: 'continue_ksef_processing',
+                        action: 'get_details',
                         timestamp: new Date().toISOString()
                     })
                 });
 
                 const data = await response.json();
 
-                // LOG KSEF PROCESSING RESPONSE
+                // LOG GET DETAILS RESPONSE
                 addLog('='.repeat(50));
-                addLog('🏭 KSEF PROCESSING RESPONSE');
+                addLog('📊 GET DETAILS RESPONSE');
                 addLog('='.repeat(50));
                 addLog(`📊 HTTP Status: ${response.status}`);
                 addLog(`📄 Response Data: ${JSON.stringify(data, null, 2)}`);
 
                 if (data.success) {
-                    addLog('✅ KSEF processing completed successfully');
+                    addLog('✅ Processing details retrieved successfully');
                     
-                    // Show success result
+                    // Hide loader and show success result
                     document.getElementById('ksefLoader').style.display = 'none';
                     displayKsefSuccessResult(data);
                     updateStatusItem('ksef-processing-status', 'complete');
+                    
+                    // Hide the get details button
+                    const getDetailsBtn = document.getElementById('getDetailsBtn');
+                    if (getDetailsBtn) {
+                        getDetailsBtn.style.display = 'none';
+                    }
                 } else {
-                    addLog('❌ KSEF processing failed');
+                    addLog('❌ Failed to get processing details');
                     addLog(`Error: ${data.error}`);
                 }
                 addLog('='.repeat(50));
 
             } catch (error) {
-                addLog(`❌ KSEF processing error: ${error.message}`, 'error');
-                document.getElementById('ksefLoader').style.display = 'none';
+                addLog(`❌ Get details error: ${error.message}`, 'error');
+                
+                // Re-enable button on error
+                const getDetailsBtn = document.getElementById('getDetailsBtn');
+                if (getDetailsBtn) {
+                    getDetailsBtn.disabled = false;
+                    getDetailsBtn.textContent = 'Get Processing Details';
+                }
             }
         }
 
