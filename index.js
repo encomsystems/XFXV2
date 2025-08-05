@@ -99,7 +99,18 @@ app.post('/api/resume-workflow', (req, res) => {
         try {
             const data = JSON.parse(responseText);
             console.log('n8n parsed response:', data);
-            res.json(data);
+            
+            // Check if the response contains XFX API response data
+            if (data.response) {
+                console.log('XFX API response detected:', data.response);
+                res.json({
+                    success: true,
+                    message: 'Invoice processed',
+                    response: data.response
+                });
+            } else {
+                res.json(data);
+            }
         } catch (parseError) {
                 console.log('Failed to parse JSON, returning text response');
                 // If it's not JSON, return the text as a message

@@ -326,6 +326,195 @@
             margin-top: 10px;
         }
 
+        /* Processing Results Styles */
+        .processing-result {
+            border-radius: 12px;
+            padding: 30px;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+        }
+
+        .processing-result.success {
+            background: linear-gradient(135deg, #d5f4e6 0%, #e8f8f0 100%);
+            border: 2px solid #27ae60;
+        }
+
+        .processing-result.error {
+            background: linear-gradient(135deg, #fdf2f2 0%, #fef5f5 100%);
+            border: 2px solid #e74c3c;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .result-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin-right: 20px;
+        }
+
+        .result-icon.success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .result-icon.error {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .result-header h3 {
+            font-size: 1.5rem;
+            margin: 0;
+            color: #2c3e50;
+        }
+
+        .result-details {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .detail-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .detail-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-item label {
+            font-weight: bold;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .detail-item span {
+            color: #2c3e50;
+            font-size: 1rem;
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
+        }
+
+        .error-details {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .error-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .error-summary label {
+            font-weight: bold;
+            color: #7f8c8d;
+        }
+
+        .error-summary span {
+            color: #e74c3c;
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        .error-message {
+            margin-bottom: 20px;
+        }
+
+        .error-message label {
+            font-weight: bold;
+            color: #7f8c8d;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .error-message p {
+            color: #e74c3c;
+            background: #fdf2f2;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #e74c3c;
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .error-description {
+            margin-top: 15px;
+        }
+
+        .error-description label {
+            font-weight: bold;
+            color: #7f8c8d;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .error-content {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .processing-loader {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .processing-loader .spinner {
+            margin: 0 auto 20px;
+        }
+
+        .retry-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .retry-btn:hover {
+            background: #c0392b;
+        }
+
         .system-logs {
             background: white;
             border-radius: 12px;
@@ -482,6 +671,74 @@
                     <p>Your invoice has been processed and sent to XFX API</p>
                 </div>
             </div>
+
+            <!-- Step 3: Invoice Processing Results -->
+            <div class="step-container hidden" id="processingResultsStep">
+                <h2>Invoice Processing</h2>
+                <p class="subtitle">Waiting for receiving confirmation</p>
+                
+                <!-- Success Result -->
+                <div class="processing-result success hidden" id="successResult">
+                    <div class="result-header">
+                        <div class="result-icon success">✓</div>
+                        <h3>Invoice Processed Successfully</h3>
+                    </div>
+                    
+                    <div class="result-details">
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>Date Received</label>
+                                <span id="dateReceived">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Invoice Number</label>
+                                <span id="invoiceNumber">-</span>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>External Tracking ID</label>
+                                <span id="externalTrackingId">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>XFX Tracking ID</label>
+                                <span id="xfxTrackingId">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Result -->
+                <div class="processing-result error hidden" id="errorResult">
+                    <div class="result-header">
+                        <div class="result-icon error">✗</div>
+                        <h3>Invoice Processing Failed</h3>
+                    </div>
+                    
+                    <div class="error-details">
+                        <div class="error-summary">
+                            <label>Error Code</label>
+                            <span id="errorCode">-</span>
+                        </div>
+                        <div class="error-message">
+                            <label>Error Message</label>
+                            <p id="errorMessage">-</p>
+                        </div>
+                        <div class="error-description" id="errorDescription">
+                            <label>Details</label>
+                            <div class="error-content" id="errorContent"></div>
+                        </div>
+                    </div>
+                    
+                    <button class="retry-btn" onclick="retryUpload()">Try Again</button>
+                </div>
+
+                <!-- Processing Loader -->
+                <div class="processing-loader" id="processingLoader">
+                    <div class="spinner"></div>
+                    <p>Processing invoice through XFX API...</p>
+                </div>
+            </div></div>
         </div>
 
         <div class="system-logs">
@@ -532,6 +789,7 @@
             // Hide all steps
             document.getElementById('startProcessStep').classList.add('hidden');
             document.getElementById('uploadInvoiceStep').classList.add('hidden');
+            document.getElementById('processingResultsStep').classList.add('hidden');
             
             // Show current step
             if (stepNumber === 1) {
@@ -541,6 +799,11 @@
                 document.getElementById('uploadInvoiceStep').classList.remove('hidden');
                 updateStatusItem('start-process-status', 'complete');
                 updateStatusItem('upload-invoice-status', 'current');
+            } else if (stepNumber === 3) {
+                document.getElementById('processingResultsStep').classList.remove('hidden');
+                updateStatusItem('upload-invoice-status', 'complete');
+                updateStatusItem('sending-invoice-status', 'complete');
+                updateStatusItem('processing-status', 'current');
             }
             
             currentStep = stepNumber;
@@ -639,9 +902,17 @@
                     addLog('Invoice uploaded successfully to n8n');
                     addLog('Processing invoice through XFX API...');
                     
-                    // Update status to next step
-                    updateStatusItem('upload-invoice-status', 'complete');
-                    updateStatusItem('sending-invoice-status', 'current');
+                    // Move to processing step
+                    setTimeout(() => {
+                        showStep(3);
+                        
+                        // Check if we have API response data
+                        if (data.response && Array.isArray(data.response) && data.response.length > 0) {
+                            setTimeout(() => {
+                                displayProcessingResult(data.response[0]);
+                            }, 1500);
+                        }
+                    }, 1000);
                     
                     // If there's a new resumeUrl, update it
                     if (data.resumeUrl) {
@@ -689,6 +960,71 @@
                 }
             }
         });
+
+        function displayProcessingResult(responseData) {
+            // Hide loader
+            document.getElementById('processingLoader').style.display = 'none';
+            
+            if (responseData.error) {
+                // Error response
+                displayErrorResult(responseData);
+                updateStatusItem('processing-status', 'current');
+                addLog(`Processing failed: ${responseData.errorMessage}`, 'error');
+            } else {
+                // Success response
+                displaySuccessResult(responseData);
+                updateStatusItem('processing-status', 'complete');
+                updateStatusItem('processed-status', 'complete');
+                addLog('Invoice processed successfully!');
+            }
+        }
+
+        function displaySuccessResult(data) {
+            const successResult = document.getElementById('successResult');
+            
+            // Update success details
+            document.getElementById('dateReceived').textContent = 
+                new Date(data.dateReceivedUtc).toLocaleString();
+            document.getElementById('invoiceNumber').textContent = data.invoiceNo || '-';
+            document.getElementById('externalTrackingId').textContent = data.externalTrackingId || '-';
+            document.getElementById('xfxTrackingId').textContent = data.xfxTrackingId || '-';
+            
+            successResult.classList.remove('hidden');
+        }
+
+        function displayErrorResult(data) {
+            const errorResult = document.getElementById('errorResult');
+            
+            // Update error details
+            document.getElementById('errorCode').textContent = data.errorCode || 'UNKNOWN';
+            document.getElementById('errorMessage').textContent = data.errorMessage || 'An unknown error occurred';
+            
+            // Parse and display detailed error description
+            if (data.long_description) {
+                try {
+                    // Try to parse and format the JSON error details
+                    const errorDetails = data.long_description;
+                    document.getElementById('errorContent').textContent = errorDetails;
+                    document.getElementById('errorDescription').classList.remove('hidden');
+                } catch (e) {
+                    document.getElementById('errorContent').textContent = data.long_description;
+                }
+            } else {
+                document.getElementById('errorDescription').classList.add('hidden');
+            }
+            
+            errorResult.classList.remove('hidden');
+        }
+
+        function retryUpload() {
+            // Reset state and go back to upload step
+            document.getElementById('successResult').classList.add('hidden');
+            document.getElementById('errorResult').classList.add('hidden');
+            document.getElementById('processingLoader').style.display = 'block';
+            
+            showStep(2);
+            addLog('Retrying upload process...');
+        }
 
         // Initialize
         window.addEventListener('load', () => {
