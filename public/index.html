@@ -914,12 +914,21 @@
                             addLog('XFX API response received');
                             console.log('Full XFX response:', data.response);
                             
-                            // Wait a bit to show the processing loader, then show results
-                            setTimeout(() => {
-                                displayProcessingResult(data.response);
-                            }, 2000);
+                            // Show results immediately without delay
+                            displayProcessingResult(data.response);
+                        } else if (data.success !== false) {
+                            // Check if there's any other response data to display
+                            addLog('Response received from n8n webhook');
+                            console.log('Full n8n response:', data);
+                            
+                            // If there's any meaningful data, show it immediately
+                            if (data.message || data.raw || Object.keys(data).length > 1) {
+                                displayProcessingResult(data);
+                            } else {
+                                // No response data yet, keep showing loader
+                                addLog('Waiting for XFX API response...');
+                            }
                         } else {
-                            // No response data yet, keep showing loader
                             addLog('Waiting for XFX API response...');
                         }
                     }, 1000);
