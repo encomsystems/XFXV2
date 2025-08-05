@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -561,7 +560,7 @@
                 grid-template-columns: 1fr;
                 gap: 20px;
             }
-            
+
             .header h1 {
                 font-size: 2rem;
             }
@@ -579,7 +578,7 @@
             <div class="workflow-status">
                 <h2>Invoice workflow status</h2>
                 <p class="subtitle">Track your progress</p>
-                
+
                 <div class="status-item pending" id="start-process-status">
                     <div class="status-icon pending">1</div>
                     <div class="status-text">
@@ -625,13 +624,13 @@
             <div class="step-container" id="startProcessStep">
                 <h2>Start Process</h2>
                 <p class="subtitle">Click to initiate the n8n workflow and get your resume URL</p>
-                
+
                 <div class="play-icon" id="playIcon" onclick="startWorkflow()"></div>
-                
+
                 <div class="workflow-section">
                     <h3>Initialize Workflow</h3>
                     <p>Start the invoice processing workflow by connecting to the n8n automation system</p>
-                    
+
                     <button class="start-btn" id="startBtn" onclick="startWorkflow()">Start Process</button>
                 </div>
 
@@ -645,7 +644,7 @@
             <div class="step-container hidden" id="uploadInvoiceStep">
                 <h2>Upload Your Invoice</h2>
                 <p class="subtitle">Select your XML invoice file to continue processing</p>
-                
+
                 <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
                     <div class="upload-icon">📄</div>
                     <h3>Drop your XML file here or click to browse</h3>
@@ -653,7 +652,7 @@
                 </div>
 
                 <input type="file" id="fileInput" accept=".xml" style="display: none;" onchange="handleFileSelect(event)">
-                
+
                 <div class="file-info" id="fileInfo">
                     <div class="file-name" id="fileName"></div>
                     <div class="file-size" id="fileSize"></div>
@@ -676,14 +675,14 @@
             <div class="step-container hidden" id="processingResultsStep">
                 <h2>Invoice Processing</h2>
                 <p class="subtitle">Waiting for receiving confirmation</p>
-                
+
                 <!-- Success Result -->
                 <div class="processing-result success hidden" id="successResult">
                     <div class="result-header">
                         <div class="result-icon success">✓</div>
                         <h3>Invoice Processed Successfully</h3>
                     </div>
-                    
+
                     <div class="result-details">
                         <div class="detail-row">
                             <div class="detail-item">
@@ -714,7 +713,7 @@
                         <div class="result-icon error">✗</div>
                         <h3>Invoice Processing Failed</h3>
                     </div>
-                    
+
                     <div class="error-details">
                         <div class="error-summary">
                             <label>Error Code</label>
@@ -729,7 +728,7 @@
                             <div class="error-content" id="errorContent"></div>
                         </div>
                     </div>
-                    
+
                     <button class="retry-btn" onclick="retryUpload()">Try Again</button>
                 </div>
 
@@ -767,11 +766,11 @@
         function updateStatusItem(itemId, status) {
             const item = document.getElementById(itemId);
             const icon = item.querySelector('.status-icon');
-            
+
             // Reset classes
             item.classList.remove('pending', 'current', 'active');
             icon.classList.remove('pending', 'current', 'complete');
-            
+
             if (status === 'complete') {
                 item.classList.add('active');
                 icon.classList.add('complete');
@@ -790,7 +789,7 @@
             document.getElementById('startProcessStep').classList.add('hidden');
             document.getElementById('uploadInvoiceStep').classList.add('hidden');
             document.getElementById('processingResultsStep').classList.add('hidden');
-            
+
             // Show current step
             if (stepNumber === 1) {
                 document.getElementById('startProcessStep').classList.remove('hidden');
@@ -807,19 +806,19 @@
                 updateStatusItem('processing-status', 'complete');
                 updateStatusItem('processed-status', 'current');
             }
-            
+
             currentStep = stepNumber;
         }
 
         async function startWorkflow() {
             const startBtn = document.getElementById('startBtn');
             const loading = document.getElementById('startLoading');
-            
+
             startBtn.disabled = true;
             loading.style.display = 'block';
-            
-            addLog('Sending request to n8n workflow...');
-            
+
+            addLog('🚀 Initiating XFX workflow...');
+
             try {
                 const response = await fetch('/api/start-workflow', {
                     method: 'POST',
@@ -827,31 +826,50 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        action: 'initialize',
+                        action: 'start_invoice_processing',
                         timestamp: new Date().toISOString()
                     })
                 });
 
                 const data = await response.json();
-                
+
+                // LOG ALL PARSED START WORKFLOW RESPONSES
+                addLog('='.repeat(50));
+                addLog('🚀 START WORKFLOW RESPONSE');
+                addLog('='.repeat(50));
+                addLog(`📊 HTTP Status: ${response.status}`);
+                addLog(`📄 Response Data: ${JSON.stringify(data, null, 2)}`);
+
                 if (data.resumeUrl) {
                     resumeUrl = data.resumeUrl;
-                    addLog('Workflow started successfully');
-                    addLog(`Resume URL received: ${resumeUrl}`);
-                    
-                    // Move to step 2
-                    setTimeout(() => {
-                        showStep(2);
-                    }, 1000);
+                    addLog(`✅ Workflow started successfully`);
+                    addLog(`🔗 Resume URL: ${resumeUrl}`);
+
+                    // Update UI to show step 2
+                    showStep(2);
+                    updateStatusItem('start-process-status', 'complete');
+                    updateStatusItem('upload-invoice-status', 'current');
+
+                } else if (data.success === false) {
+                    addLog('❌ WORKFLOW START FAILED:');
+                    addLog(`Error: ${data.error}`);
+                    if (data.raw) {
+                        addLog(`Raw response: ${data.raw}`);
+                    }
+                    throw new Error(data.error || 'No resume URL received');
                 } else {
+                    addLog('⚠️ UNEXPECTED RESPONSE FORMAT:');
+                    addLog('No resumeUrl found in response');
                     throw new Error('No resume URL received');
                 }
+                addLog('='.repeat(50));
+
             } catch (error) {
-                addLog(`Error: ${error.message}`, 'error');
-                alert('Failed to start workflow. Please try again.');
+                addLog(`❌ Start process error: ${error.message}`, 'error');
+                alert('Failed to start process. Please try again.');
             } finally {
-                loading.style.display = 'none';
                 startBtn.disabled = false;
+                loading.style.display = 'none';
             }
         }
 
@@ -859,89 +877,88 @@
             const file = event.target.files[0];
             if (file) {
                 selectedFile = file;
-                
+
                 // Update UI
                 document.getElementById('uploadArea').classList.add('has-file');
                 document.getElementById('fileName').textContent = file.name;
                 document.getElementById('fileSize').textContent = `${(file.size / 1024).toFixed(2)} KB`;
                 document.getElementById('fileInfo').classList.add('show');
                 document.getElementById('uploadBtn').disabled = false;
-                
-                addLog(`File selected: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
+
+                addLog(`📂 File selected: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
             }
         }
 
         async function uploadFile() {
             if (!selectedFile || !resumeUrl) {
-                alert('Please select a file first');
+                alert('Please start the process first and select a file');
                 return;
             }
 
             const uploadBtn = document.getElementById('uploadBtn');
             const loading = document.getElementById('uploadLoading');
-            const success = document.getElementById('uploadSuccess');
-            
+            const processingLoader = document.getElementById('processingLoader');
+
             uploadBtn.disabled = true;
             loading.style.display = 'block';
-            success.classList.remove('show');
-            
-            addLog(`Uploading ${selectedFile.name} to n8n workflow...`);
-            
+            processingLoader.style.display = 'block';
+
+            addLog('📤 Starting file upload...');
+
             try {
                 const formData = new FormData();
                 formData.append('file', selectedFile);
-                formData.append('action', 'upload-invoice');
-                
+
                 const response = await fetch(`/api/resume-workflow?resumeUrl=${encodeURIComponent(resumeUrl)}`, {
                     method: 'POST',
                     body: formData
                 });
 
                 const data = await response.json();
-                
-                if (data.success !== false) {
-                    success.classList.add('show');
-                    addLog('Invoice uploaded successfully to n8n');
-                    
-                    // Update status to show step 3 is complete (Sending Invoice)
-                    updateStatusItem('upload-invoice-status', 'complete');
-                    updateStatusItem('sending-invoice-status', 'complete');
-                    
-                    addLog('Processing invoice through XFX API...');
-                    
-                    // Check if we have immediate XFX API response data
-                    const hasXfxResponse = data.response || (data.dateReceivedUtc && data.xfxTrackingId && data.invoiceNo);
-                    
-                    if (hasXfxResponse) {
-                        // We have the XFX response, go directly to step 4 with results
-                        setTimeout(() => {
-                            showStep(3);
-                            updateStatusItem('processing-status', 'complete'); // Mark processing as complete
-                            
-                            const xfxData = data.response || data;
-                            addLog('XFX API response received');
-                            console.log('Full XFX response:', xfxData);
-                            displayProcessingResult(xfxData);
-                        }, 1000);
+
+                // LOG ALL PARSED RESPONSES FROM N8N
+                addLog('='.repeat(50));
+                addLog('📨 N8N RESPONSE RECEIVED');
+                addLog('='.repeat(50));
+                addLog(`📊 HTTP Status: ${response.status}`);
+                addLog(`📄 Response Data: ${JSON.stringify(data, null, 2)}`);
+
+                if (data.success) {
+                    addLog('✅ File uploaded successfully');
+
+                    // Check if this response contains XFX API data
+                    if (data.response) {
+                        addLog('🎯 XFX API RESPONSE DETECTED:');
+                        addLog(JSON.stringify(data.response, null, 2));
+                        addLog('Processing complete - showing results');
+                        displaySuccessResult(data.response);
+                        showStep(4);
+                        updateStatusItem('processed-status', 'complete');
+                    } else if (data.raw) {
+                        addLog('📝 RAW TEXT RESPONSE:');
+                        addLog(data.message);
                     } else {
-                        // No XFX response yet, show processing step with loader
-                        setTimeout(() => {
-                            showStep(3);
-                            addLog('Processing invoice through XFX API...');
-                        }, 1000);
+                        addLog('⏳ File uploaded, waiting for processing...');
+                        addLog(`📋 Full response: ${JSON.stringify(data, null, 2)}`);
                     }
-                    
-                    // If there's a new resumeUrl, update it
+
+                    // Update resume URL if provided
                     if (data.resumeUrl) {
                         resumeUrl = data.resumeUrl;
-                        addLog(`New resume URL received: ${resumeUrl}`);
+                        addLog(`🔗 New resume URL: ${resumeUrl}`);
                     }
-                    
+
                 } else {
+                    addLog('❌ UPLOAD FAILED:');
+                    addLog(`Error: ${data.error}`);
+                    if (data.raw) {
+                        addLog(`Raw response: ${data.raw}`);
+                    }
                     throw new Error(data.error || 'Upload failed');
                 }
+                addLog('='.repeat(50));
             } catch (error) {
-                addLog(`Upload error: ${error.message}`, 'error');
+                addLog(`❌ Upload error: ${error.message}`, 'error');
                 alert('Failed to upload file. Please try again.');
             } finally {
                 loading.style.display = 'none';
@@ -951,21 +968,21 @@
 
         // Drag and drop functionality
         const uploadArea = document.getElementById('uploadArea');
-        
+
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('dragover');
         });
-        
+
         uploadArea.addEventListener('dragleave', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
         });
-        
+
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            
+
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 const file = files[0];
@@ -981,27 +998,27 @@
         function displayProcessingResult(responseData) {
             // Hide loader and ensure we're on the right step
             document.getElementById('processingLoader').style.display = 'none';
-            
-            addLog('Processing result received from XFX API');
+
+            addLog('✅ Processing result received from XFX API');
             console.log('Response data:', responseData);
-            
+
             if (responseData.error || responseData.errorCode) {
                 // Error response
                 displayErrorResult(responseData);
                 updateStatusItem('processing-status', 'current');
-                addLog(`Processing failed: ${responseData.errorMessage || responseData.error}`, 'error');
+                addLog(`❌ Processing failed: ${responseData.errorMessage || responseData.error}`);
             } else {
                 // Success response - show step 4 with results
                 displaySuccessResult(responseData);
                 updateStatusItem('processing-status', 'complete');
                 updateStatusItem('processed-status', 'complete');
-                
+
                 // Change the step title to show completion
                 const stepTitle = document.querySelector('#processingResultsStep h2');
                 stepTitle.textContent = 'Invoice Processing Complete';
                 const stepSubtitle = document.querySelector('#processingResultsStep .subtitle');
                 stepSubtitle.textContent = 'Your invoice has been successfully processed';
-                
+
                 addLog('✅ Invoice processed successfully!');
                 addLog(`📄 Invoice Number: ${responseData.invoiceNo}`);
                 addLog(`🔍 XFX Tracking ID: ${responseData.xfxTrackingId}`);
@@ -1010,20 +1027,20 @@
 
         function displaySuccessResult(data) {
             const successResult = document.getElementById('successResult');
-            
+
             // Handle XFX API response format exactly as provided
             console.log('Displaying success result for:', data);
-            
+
             // Update success details with exact XFX API response format
             const dateReceived = data.dateReceivedUtc || data.dateReceived || new Date().toISOString();
-            document.getElementById('dateReceived').textContent = 
+            document.getElementById('dateReceived').textContent =
                 new Date(dateReceived).toLocaleString();
             document.getElementById('invoiceNumber').textContent = data.invoiceNo || '-';
             document.getElementById('externalTrackingId').textContent = data.externalTrackingId || '-';
             document.getElementById('xfxTrackingId').textContent = data.xfxTrackingId || '-';
-            
+
             successResult.classList.remove('hidden');
-            
+
             // Log the successful processing with exact details
             addLog('✅ Invoice processing completed successfully');
             addLog(`📄 Invoice Number: ${data.invoiceNo}`);
@@ -1034,11 +1051,11 @@
 
         function displayErrorResult(data) {
             const errorResult = document.getElementById('errorResult');
-            
+
             // Update error details
             document.getElementById('errorCode').textContent = data.errorCode || 'UNKNOWN';
             document.getElementById('errorMessage').textContent = data.errorMessage || 'An unknown error occurred';
-            
+
             // Parse and display detailed error description
             if (data.long_description) {
                 try {
@@ -1052,7 +1069,7 @@
             } else {
                 document.getElementById('errorDescription').classList.add('hidden');
             }
-            
+
             errorResult.classList.remove('hidden');
         }
 
@@ -1061,17 +1078,17 @@
             document.getElementById('successResult').classList.add('hidden');
             document.getElementById('errorResult').classList.add('hidden');
             document.getElementById('processingLoader').style.display = 'block';
-            
+
             showStep(2);
-            addLog('Retrying upload process...');
+            addLog('🔄 Retrying upload process...');
         }
 
         // Initialize
         window.addEventListener('load', () => {
             showStep(1);
             setTimeout(() => {
-                addLog('XFX Invoice System loaded successfully');
-                addLog('Ready to process invoices - Click Start Process to begin');
+                addLog('💡 XFX Invoice System loaded successfully');
+                addLog('✅ Ready to process invoices - Click Start Process to begin');
             }, 500);
         });
     </script>
