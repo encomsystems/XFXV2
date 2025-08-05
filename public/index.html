@@ -1329,10 +1329,6 @@
             }
         }
 
-        // Global variables for polling
-        let pollingInterval = null;
-        let pollingLoopCount = 0;
-
         async function getProcessingDetails() {
             if (!resumeUrl) {
                 addLog('❌ No resume URL available for getting details');
@@ -1345,14 +1341,10 @@
             // Show connecting message for 3 seconds
             const ksefLoader = document.getElementById('ksefLoader');
             const loaderText = ksefLoader.querySelector('p');
-            const originalText = loaderText.textContent;
             loaderText.textContent = 'Connecting to KSEF gate and waiting for response...';
 
             // Wait 3 seconds before making the actual request
             await new Promise(resolve => setTimeout(resolve, 3000));
-
-            // Reset polling variables
-            pollingLoopCount = 0;
             
             // Hide the get details button immediately
             const getDetailsBtn = document.getElementById('getDetailsBtn');
@@ -1360,23 +1352,21 @@
                 getDetailsBtn.style.display = 'none';
             }
 
-            // Start polling
-            await pollKsefStatus();
+            // Make a single request to n8n - let n8n handle the polling internally
+            await requestKsefStatus();
         }
 
-        async function pollKsefStatus() {
-            pollingLoopCount++;
-            addLog(`🔄 Polling KSEF status (Loop ${pollingLoopCount})...`);
+        async function requestKsefStatus() {
+            addLog('🔄 Requesting KSEF status from n8n (n8n will handle polling)...');
 
             try {
-                // Create form data to trigger the wait node properly
+                // Create form data to trigger the wait node
                 const formData = new FormData();
                 formData.append('action', 'get_details');
                 formData.append('timestamp', new Date().toISOString());
                 formData.append('step', 'ksef_processing');
-                formData.append('loop', pollingLoopCount.toString());
 
-                // Send get details request to n8n workflow
+                // Send single request to n8n workflow - n8n will poll internally
                 const response = await fetch(`/api/resume-workflow?resumeUrl=${encodeURIComponent(resumeUrl)}`, {
                     method: 'POST',
                     body: formData
@@ -1386,10 +1376,24 @@
 
                 // LOG GET DETAILS RESPONSE
                 addLog('='.repeat(50));
-                addLog(`📊 GET DETAILS RESPONSE (Loop ${pollingLoopCount})`);
+                addLog('📊 KSEF STATUS RESPONSE FROM N8N');
                 addLog('='.repeat(50));
                 addLog(`📊 HTTP Status: ${response.status}`);
                 addLog(`📄 Response Data: ${JSON.stringify(data, null, 2)}`);
+
+                // Handle n8n execution conflict (409 error)
+                if (response.status === 409) {
+                    addLog('⚠️ N8N execution already running - this is expected during processing');
+                    addLog('🔄 N8N is handling the polling internally, please wait...');
+                    
+                    // Update loader to show n8n is processing
+                    const ksefLoader = document.getElementById('ksefLoader');
+                    const loaderText = ksefLoader.querySelector('p');
+                    loaderText.textContent = 'N8N is processing KSEF status internally, please wait...';
+                    
+                    // Don't retry - let n8n finish its internal processing
+                    return;
+                }
 
                 if (data.success || response.status === 200) {
                     // Check if response contains KSEF data array
@@ -1402,24 +1406,11 @@
                     
                     if (ksefData && ksefData.ksefSubmissionStatus) {
                         const status = ksefData.ksefSubmissionStatus;
-                        addLog(`📋 Current KSEF Status: ${status}`);
-                        
-                        // Update loader text with current status
-                        const ksefLoader = document.getElementById('ksefLoader');
-                        const loaderText = ksefLoader.querySelector('p');
-                        loaderText.textContent = `Processing in KSEF system gate... Status: ${status} (Loop ${pollingLoopCount})`;
+                        addLog(`📋 Final KSEF Status received: ${status}`);
                         
                         if (status === 'SUBMITTED') {
-                            // Stop polling and show summary
-                            if (pollingInterval) {
-                                clearInterval(pollingInterval);
-                                pollingInterval = null;
-                            }
-                            
                             addLog('🎉 Invoice successfully submitted to KSEF!');
-                            addLog(`📋 Final KSEF Status: ${status}`);
                             addLog(`🏷️ KSEF Number: ${ksefData.ksefNumber}`);
-                            addLog(`🔄 Total polling loops: ${pollingLoopCount}`);
                             
                             // Hide step 5 and show step 6 (Invoice Summary)
                             showStep(6);
@@ -1427,15 +1418,8 @@
                             displayInvoiceSummary(ksefData);
                             
                         } else if (status === 'REJECTED') {
-                            // Stop polling and show summary for rejected invoice
-                            if (pollingInterval) {
-                                clearInterval(pollingInterval);
-                                pollingInterval = null;
-                            }
-                            
                             addLog('❌ Invoice rejected by KSEF system');
                             addLog(`📋 Final KSEF Status: ${status}`);
-                            addLog(`🔄 Total polling loops: ${pollingLoopCount}`);
                             
                             // Hide step 5 and show step 6 (Invoice Summary) even for rejected
                             showStep(6);
@@ -1443,51 +1427,46 @@
                             displayInvoiceSummary(ksefData);
                             
                         } else if (status === 'UNKNOWN' || status === 'INPROGRESS') {
-                            // Continue polling for these statuses
-                            addLog(`⏳ Invoice still processing (${status}). Will check again in 5 seconds...`);
+                            // This should not happen if n8n is polling internally
+                            addLog(`⚠️ Received intermediate status: ${status}`);
+                            addLog('🔄 N8N should continue polling internally...');
                             
-                            // Schedule next poll in 5 seconds
-                            setTimeout(() => {
-                                pollKsefStatus();
-                            }, 5000);
+                            // Update loader to show current status
+                            const ksefLoader = document.getElementById('ksefLoader');
+                            const loaderText = ksefLoader.querySelector('p');
+                            loaderText.textContent = `Processing in KSEF system gate... Status: ${status}`;
                             
                         } else {
-                            // Unknown status - continue polling but log it
-                            addLog(`⚠️ Unknown status received: ${status}. Continuing to poll...`);
+                            addLog(`⚠️ Unknown status received: ${status}`);
                             
-                            // Schedule next poll in 5 seconds
-                            setTimeout(() => {
-                                pollKsefStatus();
-                            }, 5000);
+                            // Update loader to show current status
+                            const ksefLoader = document.getElementById('ksefLoader');
+                            const loaderText = ksefLoader.querySelector('p');
+                            loaderText.textContent = `Processing in KSEF system gate... Status: ${status}`;
                         }
                     } else {
-                        addLog('⚠️ No KSEF status found in response. Retrying...');
-                        
-                        // Schedule next poll in 5 seconds
-                        setTimeout(() => {
-                            pollKsefStatus();
-                        }, 5000);
+                        addLog('⚠️ No KSEF status found in response');
+                        addLog('🔄 N8N may still be processing...');
                     }
                 } else {
-                    addLog(`❌ Failed to get processing details (Loop ${pollingLoopCount})`);
+                    addLog(`❌ Failed to get processing details`);
                     addLog(`Error: ${data.error || 'Unknown error'}`);
-                    
-                    // Continue polling even on error
-                    addLog('🔄 Will retry in 5 seconds...');
-                    setTimeout(() => {
-                        pollKsefStatus();
-                    }, 5000);
                 }
                 addLog('='.repeat(50));
 
             } catch (error) {
-                addLog(`❌ Get details error (Loop ${pollingLoopCount}): ${error.message}`, 'error');
+                addLog(`❌ Get details error: ${error.message}`, 'error');
                 
-                // Continue polling even on error
-                addLog('🔄 Will retry in 5 seconds...');
-                setTimeout(() => {
-                    pollKsefStatus();
-                }, 5000);
+                // Check if it's a 409 error in the error message
+                if (error.message.includes('409')) {
+                    addLog('⚠️ N8N execution already running - this is expected during processing');
+                    addLog('🔄 N8N is handling the polling internally, please wait...');
+                    
+                    // Update loader to show n8n is processing
+                    const ksefLoader = document.getElementById('ksefLoader');
+                    const loaderText = ksefLoader.querySelector('p');
+                    loaderText.textContent = 'N8N is processing KSEF status internally, please wait...';
+                }
             }
         }
 
