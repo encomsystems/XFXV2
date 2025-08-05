@@ -1359,7 +1359,8 @@
         }
 
         async function requestKsefStatus(retryCount = 0) {
-            const maxRetries = 10; // Maximum 10 retries (about 2 minutes total)
+            const maxRetries = 10; // Maximum 10 retries for errors
+            const maxPollingAttempts = 15; // Maximum 15 polling attempts (about 6-7 minutes)
 
             addLog(`🔄 Requesting KSEF status from n8n (attempt ${retryCount + 1}/${maxRetries + 1})...`);
 
@@ -1452,41 +1453,87 @@
                                 }
                             }
 
-                            // Hide step 5 and show step 6 (Invoice Summary)
+                            // Reset polling counter and show step 6
+                            pollingLoopCount = 0;
                             showStep(6);
                             updateStatusItem('ksef-processing-status', 'complete');
                             displayInvoiceSummary(ksefData);
+                            return; // Exit the function
 
                         } else if (status === 'UNKNOWN' || status === 'INPROGRESS') {
                             pollingLoopCount++; // Increment loop counter
-                            addLog(`⚠️ Still processing with status: ${status} (loop ${pollingLoopCount}), waiting longer...`);
+                            
+                            // Check if we've exceeded maximum polling attempts
+                            if (pollingLoopCount >= maxPollingAttempts) {
+                                addLog(`❌ Maximum polling attempts reached (${maxPollingAttempts}). Stopping loop.`);
+                                addLog('💡 The KSEF system may be taking longer than expected. Try refreshing the page.');
+                                addLog('🔄 Current status was: ' + status);
+                                
+                                // Show timeout message in step 6 with current data
+                                showStep(6);
+                                updateStatusItem('ksef-processing-status', 'complete');
+                                
+                                // Create a timeout summary
+                                const timeoutData = {
+                                    ...ksefData,
+                                    ksefSubmissionStatus: 'TIMEOUT',
+                                    timeoutReason: `Exceeded ${maxPollingAttempts} polling attempts. Last status: ${status}`
+                                };
+                                displayInvoiceSummary(timeoutData);
+                                return;
+                            }
+                            
+                            addLog(`⚠️ Still processing with status: ${status} (loop ${pollingLoopCount}/${maxPollingAttempts}), waiting longer...`);
 
                             // Update loader to show current status and loop count
                             const ksefLoader = document.getElementById('ksefLoader');
                             const loaderText = ksefLoader.querySelector('p');
-                            loaderText.textContent = `Processing in KSEF system gate... Status: ${status} (attempt ${pollingLoopCount})`;
+                            loaderText.textContent = `Processing in KSEF system gate... Status: ${status} (attempt ${pollingLoopCount}/${maxPollingAttempts})`;
 
                             // Wait longer and try again (n8n might need more time)
                             setTimeout(() => {
                                 addLog('🔄 Checking status again...');
-                                requestKsefStatus(retryCount);
+                                requestKsefStatus(0); // Reset retry count for polling attempts
                             }, 25000);
 
                         } else {
                             addLog(`⚠️ Unknown status received: ${status}`);
+                            pollingLoopCount++;
+                            
+                            if (pollingLoopCount >= maxPollingAttempts) {
+                                addLog(`❌ Maximum polling attempts reached with unknown status. Stopping.`);
+                                showStep(6);
+                                updateStatusItem('ksef-processing-status', 'complete');
+                                displayInvoiceSummary({...ksefData, ksefSubmissionStatus: 'UNKNOWN_TIMEOUT'});
+                                return;
+                            }
 
                             // Update loader to show current status
                             const ksefLoader = document.getElementById('ksefLoader');
                             const loaderText = ksefLoader.querySelector('p');
-                            loaderText.textContent = `Processing in KSEF system gate... Status: ${status}`;
+                            loaderText.textContent = `Processing in KSEF system gate... Status: ${status} (attempt ${pollingLoopCount}/${maxPollingAttempts})`;
+                            
+                            setTimeout(() => {
+                                requestKsefStatus(0);
+                            }, 25000);
                         }
                     } else {
-                        addLog('⚠️ No KSEF status found in response, n8n may still be processing...');
+                        pollingLoopCount++;
+                        
+                        if (pollingLoopCount >= maxPollingAttempts) {
+                            addLog(`❌ Maximum polling attempts reached without KSEF status. Stopping.`);
+                            showStep(6);
+                            updateStatusItem('ksef-processing-status', 'complete');
+                            displayInvoiceSummary({ksefSubmissionStatus: 'NO_STATUS_TIMEOUT'});
+                            return;
+                        }
+                        
+                        addLog(`⚠️ No KSEF status found in response (attempt ${pollingLoopCount}/${maxPollingAttempts}), n8n may still be processing...`);
                         addLog('🔄 Will retry in 25 seconds...');
 
                         // Wait and try again
                         setTimeout(() => {
-                            requestKsefStatus(retryCount);
+                            requestKsefStatus(0);
                         }, 25000);
                     }
                 } else {
@@ -1556,6 +1603,7 @@
 
             const status = ksefData.ksefSubmissionStatus || 'UNKNOWN';
             const isRejected = status === 'REJECTED';
+            const isTimeout = status.includes('TIMEOUT');
 
             // Update all summary fields
             document.getElementById('summaryStatus').textContent = status;
@@ -1590,25 +1638,41 @@
             const resultTitle = resultHeader.querySelector('h3');
             const statusDiv = summaryResult.querySelector('div[style*="background: #d5f4e6"], div[style*="background: #fdf2f2"]');
 
-            if (isRejected) {
-                // Update for rejected status with red theme
+            if (isRejected || isTimeout) {
+                // Update for rejected/timeout status with red/orange theme
                 summaryResult.classList.remove('success');
                 summaryResult.classList.add('error');
-                summaryResult.style.background = 'linear-gradient(135deg, #fdf2f2 0%, #fef5f5 100%)';
-                summaryResult.style.border = '2px solid #e74c3c';
+                
+                if (isTimeout) {
+                    summaryResult.style.background = 'linear-gradient(135deg, #fff3cd 0%, #fef5e7 100%)';
+                    summaryResult.style.border = '2px solid #ffc107';
+                    resultIcon.style.background = '#ffc107';
+                    resultIcon.textContent = '⏱️';
+                    resultTitle.textContent = 'Processing Timeout';
+                    statusDiv.style.background = '#fff3cd';
+                    statusDiv.style.color = '#856404';
+                    statusDiv.style.border = '2px solid #ffc107';
+                    
+                    // Update step title
+                    const stepTitle = document.querySelector('#invoiceSummaryStep h2');
+                    stepTitle.textContent = 'Processing Timeout';
+                } else {
+                    summaryResult.style.background = 'linear-gradient(135deg, #fdf2f2 0%, #fef5f5 100%)';
+                    summaryResult.style.border = '2px solid #e74c3c';
+                    resultIcon.style.background = '#e74c3c';
+                    resultIcon.textContent = '✗';
+                    resultTitle.textContent = 'Invoice Rejected';
+                    statusDiv.style.background = '#fdf2f2';
+                    statusDiv.style.color = '#e74c3c';
+                    statusDiv.style.border = '2px solid #e74c3c';
+                    
+                    // Update step title
+                    const stepTitle = document.querySelector('#invoiceSummaryStep h2');
+                    stepTitle.textContent = 'Invoice Rejected';
+                }
                 
                 resultIcon.classList.remove('success');
                 resultIcon.classList.add('error');
-                resultIcon.style.background = '#e74c3c';
-                resultIcon.textContent = '✗';
-                resultTitle.textContent = 'Invoice Rejected';
-                statusDiv.style.background = '#fdf2f2';
-                statusDiv.style.color = '#e74c3c';
-                statusDiv.style.border = '2px solid #e74c3c';
-
-                // Update step title
-                const stepTitle = document.querySelector('#invoiceSummaryStep h2');
-                stepTitle.textContent = 'Invoice Rejected';
                 
                 // Add business error messages section for rejected invoices
                 if (ksefData.businessErrorMsgs && Array.isArray(ksefData.businessErrorMsgs)) {
