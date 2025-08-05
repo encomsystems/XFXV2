@@ -618,6 +618,14 @@
                         <p>Processing in KSEF system gate</p>
                     </div>
                 </div>
+
+                <div class="status-item pending" id="invoice-summary-status">
+                    <div class="status-icon pending">6</div>
+                    <div class="status-text">
+                        <h3>Invoice Summary</h3>
+                        <p>Final status of invoice processing</p>
+                    </div>
+                </div>
             </div>
 
             <!-- Step 1: Start Process -->
@@ -786,6 +794,107 @@
                     <div class="spinner"></div>
                     <p>Processing invoice in KSEF system gate...</p>
                 </div>
+            </div>
+
+            <!-- Step 6: Invoice Summary -->
+            <div class="step-container hidden" id="invoiceSummaryStep">
+                <h2>Invoice Processed</h2>
+                <p class="subtitle">Final status of invoice processing</p>
+
+                <div class="processing-result success" id="invoiceSummaryResult">
+                    <div class="result-header">
+                        <div class="result-icon success">↑</div>
+                        <h3>Invoice Successfully Submitted</h3>
+                    </div>
+
+                    <div style="text-align: center; margin: 20px 0;">
+                        <div style="background: #d5f4e6; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
+                            <strong>Status: <span id="summaryStatus">SUBMITTED</span></strong>
+                        </div>
+                    </div>
+
+                    <div class="result-details">
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>KSEF Number</label>
+                                <span id="summaryKsefNumber">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Company</label>
+                                <span id="summaryCompany">-</span>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>Invoice Number</label>
+                                <span id="summaryInvoiceNumber">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>VAT Number</label>
+                                <span id="summaryVatNumber">-</span>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>Total Amount</label>
+                                <span id="summaryTotalAmount">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Processing Mode</label>
+                                <span id="summaryProcessingMode">-</span>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>Issue Date</label>
+                                <span id="summaryIssueDate">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Date Received</label>
+                                <span id="summaryDateReceived">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Government Verification Section -->
+                    <div style="background: #ffeb3b; border-radius: 12px; padding: 25px; margin: 25px 0; text-align: center;">
+                        <h3 style="color: #333; margin-bottom: 15px;">Government Verification</h3>
+                        <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                            <div id="qrCodeContainer" style="margin-bottom: 15px;">
+                                <!-- QR Code will be generated here -->
+                            </div>
+                        </div>
+                        <p style="color: #333; font-size: 0.9rem; margin-bottom: 10px;">Official government verification QR code</p>
+                        <div style="background: white; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.8rem; word-break: break-all;" id="qrCodeUrl">
+                            -
+                        </div>
+                    </div>
+
+                    <!-- Additional Information Section -->
+                    <div style="margin-top: 25px;">
+                        <h4 style="color: #2c3e50; margin-bottom: 15px;">Additional Information</h4>
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>KSEF Date</label>
+                                <span id="summaryKsefDate">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Sale Date</label>
+                                <span id="summarySaleDate">-</span>
+                            </div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-item">
+                                <label>Schema Version</label>
+                                <span id="summarySchemaVersion">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Currency Code</label>
+                                <span id="summaryCurrencyCode">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div></div>
         </div>
 
@@ -839,6 +948,7 @@
             document.getElementById('uploadInvoiceStep').classList.add('hidden');
             document.getElementById('processingResultsStep').classList.add('hidden');
             document.getElementById('ksefProcessingStep').classList.add('hidden');
+            document.getElementById('invoiceSummaryStep').classList.add('hidden');
 
             // Show current step
             if (stepNumber === 1) {
@@ -877,6 +987,10 @@
                 document.getElementById('ksefProcessingStep').classList.remove('hidden');
                 document.getElementById('ksefLoader').style.display = 'block';
                 document.getElementById('ksefSuccessResult').classList.add('hidden');
+            } else if (stepNumber === 6) {
+                // Step 6: Invoice Summary
+                document.getElementById('invoiceSummaryStep').classList.remove('hidden');
+                updateStatusItem('invoice-summary-status', 'current');
             }
 
             currentStep = stepNumber;
@@ -1222,6 +1336,16 @@
             }
 
             addLog('📊 Requesting processing details from n8n...');
+            addLog('🌐 Connecting to KSEF gate...');
+            
+            // Show connecting message for 3 seconds
+            const ksefLoader = document.getElementById('ksefLoader');
+            const loaderText = ksefLoader.querySelector('p');
+            const originalText = loaderText.textContent;
+            loaderText.textContent = 'Connecting to KSEF gate and waiting for response...';
+
+            // Wait 3 seconds before making the actual request
+            await new Promise(resolve => setTimeout(resolve, 3000));
 
             try {
                 // Create form data to trigger the wait node properly
@@ -1248,10 +1372,30 @@
                 if (data.success || response.status === 200) {
                     addLog('✅ Processing details retrieved successfully');
                     
-                    // Hide loader and show success result
-                    document.getElementById('ksefLoader').style.display = 'none';
-                    displayKsefSuccessResult(data);
-                    updateStatusItem('ksef-processing-status', 'complete');
+                    // Check if response contains KSEF data array
+                    let ksefData = null;
+                    if (data.data && Array.isArray(data.data)) {
+                        ksefData = data.data[0];
+                    } else if (Array.isArray(data)) {
+                        ksefData = data[0];
+                    }
+                    
+                    // Check if ksefSubmissionStatus is SUBMITTED
+                    if (ksefData && ksefData.ksefSubmissionStatus === 'SUBMITTED') {
+                        addLog('🎉 Invoice successfully submitted to KSEF!');
+                        addLog(`📋 KSEF Status: ${ksefData.ksefSubmissionStatus}`);
+                        addLog(`🏷️ KSEF Number: ${ksefData.ksefNumber}`);
+                        
+                        // Hide step 5 and show step 6 (Invoice Summary)
+                        showStep(6);
+                        updateStatusItem('ksef-processing-status', 'complete');
+                        displayInvoiceSummary(ksefData);
+                    } else {
+                        // Show regular KSEF success result
+                        document.getElementById('ksefLoader').style.display = 'none';
+                        displayKsefSuccessResult(data);
+                        updateStatusItem('ksef-processing-status', 'complete');
+                    }
                     
                     // Hide the get details button
                     const getDetailsBtn = document.getElementById('getDetailsBtn');
@@ -1262,7 +1406,8 @@
                     addLog('❌ Failed to get processing details');
                     addLog(`Error: ${data.error || 'Unknown error'}`);
                     
-                    // Re-enable button on error
+                    // Restore original loader text and re-enable button
+                    loaderText.textContent = originalText;
                     const getDetailsBtn = document.getElementById('getDetailsBtn');
                     if (getDetailsBtn) {
                         getDetailsBtn.disabled = false;
@@ -1274,7 +1419,8 @@
             } catch (error) {
                 addLog(`❌ Get details error: ${error.message}`, 'error');
                 
-                // Re-enable button on error
+                // Restore original loader text and re-enable button
+                loaderText.textContent = originalText;
                 const getDetailsBtn = document.getElementById('getDetailsBtn');
                 if (getDetailsBtn) {
                     getDetailsBtn.disabled = false;
@@ -1299,6 +1445,58 @@
             addLog('🏭 System Gateway: KSEF');
             addLog('📅 Processing completed at: ' + new Date().toLocaleString());
             addLog('🎉 Full invoice processing workflow completed!');
+        }
+
+        function displayInvoiceSummary(ksefData) {
+            addLog('📋 Displaying invoice summary...');
+            
+            // Update all summary fields
+            document.getElementById('summaryStatus').textContent = ksefData.ksefSubmissionStatus || 'SUBMITTED';
+            document.getElementById('summaryKsefNumber').textContent = ksefData.ksefNumber || '-';
+            document.getElementById('summaryCompany').textContent = ksefData.subject1Name || '-';
+            document.getElementById('summaryInvoiceNumber').textContent = ksefData.number || '-';
+            document.getElementById('summaryVatNumber').textContent = ksefData.subject1VatNumber || '-';
+            document.getElementById('summaryTotalAmount').textContent = ksefData.totalAmount ? `${ksefData.totalAmount} ${ksefData.currencyCode || 'PLN'}` : '-';
+            document.getElementById('summaryProcessingMode').textContent = ksefData.processingMode || '-';
+            
+            // Format dates
+            if (ksefData.issueDate) {
+                document.getElementById('summaryIssueDate').textContent = new Date(ksefData.issueDate).toLocaleDateString();
+            }
+            if (ksefData.dateReceivedUtc) {
+                document.getElementById('summaryDateReceived').textContent = new Date(ksefData.dateReceivedUtc).toLocaleString();
+            }
+            if (ksefData.ksefDate) {
+                document.getElementById('summaryKsefDate').textContent = new Date(ksefData.ksefDate).toLocaleString();
+            }
+            if (ksefData.saleDate) {
+                document.getElementById('summarySaleDate').textContent = new Date(ksefData.saleDate).toLocaleDateString();
+            }
+            
+            document.getElementById('summarySchemaVersion').textContent = ksefData.schemaVersion || '-';
+            document.getElementById('summaryCurrencyCode').textContent = ksefData.currencyCode || '-';
+            
+            // Handle QR Code
+            if (ksefData.qrCode) {
+                document.getElementById('qrCodeUrl').textContent = ksefData.qrCode;
+                
+                // Generate QR Code placeholder (in real implementation, you'd use a QR code library)
+                const qrContainer = document.getElementById('qrCodeContainer');
+                qrContainer.innerHTML = `
+                    <div style="width: 120px; height: 120px; background: #000; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; text-align: center; border-radius: 4px;">
+                        QR CODE<br>
+                        ${ksefData.ksefNumber || 'CODE'}
+                    </div>
+                `;
+            }
+            
+            updateStatusItem('invoice-summary-status', 'complete');
+            
+            addLog('✅ Invoice summary displayed successfully');
+            addLog(`📄 Final Status: ${ksefData.ksefSubmissionStatus}`);
+            addLog(`🏷️ KSEF Number: ${ksefData.ksefNumber}`);
+            addLog(`💰 Total Amount: ${ksefData.totalAmount} ${ksefData.currencyCode}`);
+            addLog('🎉 Complete invoice processing workflow finished!');
         }
 
         function retryUpload() {
