@@ -138,14 +138,33 @@ app.post('/api/resume-workflow', (req, res) => {
             console.log(JSON.stringify(data, null, 2));
             
             // Check if the response is an array containing XFX API response data
-            if (Array.isArray(data) && data.length > 0 && data[0].xfxTrackingId) {
-                console.log('🎯 XFX API RESPONSE DETECTED (ARRAY FORMAT):');
-                console.log(JSON.stringify(data[0], null, 2));
-                res.json({
-                    success: true,
-                    message: 'Invoice processed',
-                    response: data[0]  // Extract first item from array
-                });
+            if (Array.isArray(data) && data.length > 0) {
+                const firstItem = data[0];
+                
+                // Check if it's an error response
+                if (firstItem.error === true || firstItem.errorCode || firstItem.errorMessage) {
+                    console.log('❌ XFX API ERROR RESPONSE DETECTED (ARRAY FORMAT):');
+                    console.log(JSON.stringify(firstItem, null, 2));
+                    res.json({
+                        success: false,
+                        error: 'Invoice rejected for processing',
+                        errorResponse: firstItem
+                    });
+                } else if (firstItem.xfxTrackingId) {
+                    console.log('🎯 XFX API SUCCESS RESPONSE DETECTED (ARRAY FORMAT):');
+                    console.log(JSON.stringify(firstItem, null, 2));
+                    res.json({
+                        success: true,
+                        message: 'Invoice processed',
+                        response: firstItem  // Extract first item from array
+                    });
+                } else {
+                    console.log('📤 Sending array data to frontend');
+                    res.json({
+                        success: true,
+                        data: data
+                    });
+                }
             } else if (data.response) {
                 console.log('🎯 XFX API RESPONSE DETECTED (OBJECT FORMAT):');
                 console.log(JSON.stringify(data.response, null, 2));

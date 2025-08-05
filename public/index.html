@@ -965,6 +965,24 @@
                         addLog(`🔗 New resume URL: ${resumeUrl}`);
                     }
 
+                } else if (data.success === false && data.errorResponse) {
+                    // Handle XFX API error response
+                    addLog('❌ XFX API Error Response:');
+                    addLog(JSON.stringify(data.errorResponse, null, 2));
+                    
+                    // Go to Step 3: Sending Invoice first
+                    showStep(3);
+                    updateStatusItem('upload-invoice-status', 'complete');
+                    updateStatusItem('sending-invoice-status', 'current');
+                    
+                    // Wait 3 seconds then show error in step 4
+                    setTimeout(() => {
+                        showStep(4);
+                        updateStatusItem('sending-invoice-status', 'complete');
+                        updateStatusItem('processing-status', 'current');
+                        displayErrorResult(data.errorResponse);
+                    }, 3000);
+
                 } else {
                     addLog('❌ UPLOAD FAILED:');
                     addLog(`Error: ${data.error}`);
@@ -1062,9 +1080,9 @@
         function displayErrorResult(data) {
             const errorResult = document.getElementById('errorResult');
 
-            // Update error details
+            // Update error details - handle both formats
             document.getElementById('errorCode').textContent = data.errorCode || 'UNKNOWN';
-            document.getElementById('errorMessage').textContent = data.errorMessage || 'An unknown error occurred';
+            document.getElementById('errorMessage').textContent = data.errorMessage || data.error || 'An unknown error occurred';
 
             // Parse and display detailed error description
             if (data.long_description) {
@@ -1072,15 +1090,25 @@
                     // Try to parse and format the JSON error details
                     const errorDetails = data.long_description;
                     document.getElementById('errorContent').textContent = errorDetails;
-                    document.getElementById('errorDescription').classList.remove('hidden');
+                    document.getElementById('errorDescription').style.display = 'block';
                 } catch (e) {
                     document.getElementById('errorContent').textContent = data.long_description;
+                    document.getElementById('errorDescription').style.display = 'block';
                 }
             } else {
-                document.getElementById('errorDescription').classList.add('hidden');
+                document.getElementById('errorDescription').style.display = 'none';
             }
 
             errorResult.classList.remove('hidden');
+
+            // Log the error details
+            addLog('❌ Invoice rejected for processing');
+            addLog(`🚫 Error Code: ${data.errorCode}`);
+            addLog(`📝 Error Message: ${data.errorMessage}`);
+            if (data.long_description) {
+                addLog('📋 Error Details:');
+                addLog(data.long_description);
+            }
         }
 
         function retryUpload() {
