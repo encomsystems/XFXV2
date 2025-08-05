@@ -1,0 +1,103 @@
+[12:32:36 PM] 📊 HTTP Status: 500
+[12:32:36 PM] 📄 Response Data: {
+  "success": false,
+  "error": "Failed to resume workflow: n8n responded with status: 409 - {\"code\":409,\"message\":\"The execution \\\"324\\\" is running already.\"}"
+}
+[12:32:36 PM] ⚠️ N8N execution conflict (409) - waiting 5s before retry 2/11...
+[12:32:41 PM] 🔄 Requesting KSEF status from n8n (attempt 2/11)...
+[12:32:41 PM] ==================================================
+[12:32:41 PM] 📊 KSEF STATUS RESPONSE FROM N8N
+[12:32:41 PM] ==================================================
+[12:32:41 PM] 📊 HTTP Status: 200
+[12:32:41 PM] 📄 Response Data: {
+  "success": true,
+  "data": {
+    "businessErrorMsgs": [
+      "DispatchInvoice failed!",
+      "Failed to send an invoice; Detailed info: Limit żądań osiągnięty.",
+      "\"Failed to send an invoice; Detailed info: Limit żądań osiągnięty.\""
+    ],
+    "ksefSubmissionStatus": "REJECTED",
+    "ksefSubmissionStatusCode": 5,
+    "externalTrackingId": "JDE9469685910",
+    "hasUpo": false,
+    "requiresBatchDispatch": false,
+    "isInAnyBatch": false,
+    "requiresManualAcceptUsersStr": "-",
+    "requiresManualAcceptUsersConfirmedStr": "-",
+    "timeToTimeout": 0,
+    "processingMode": "Online",
+    "id": "18e86841-bfdb-4e55-9ecb-08ddbf89de19",
+    "dateReceivedUtc": "2025-08-05T10:32:01.3004283",
+    "status": "ErrorArchived",
+    "fkSystem": "SAP",
+    "number": "25908990",
+    "subject1VatNumber": "5992536573",
+    "subject1Name": "ICT Poland Sp. z o.o.",
+    "subject2Name": "XXX",
+    "subject3RoleOther": false,
+    "totalAmount": 150,
+    "issueDate": "2025-05-12T00:00:00",
+    "sessionId": "b0f74b3d-11ca-4294-0de4-08ddbc12cbbd",
+    "hasBusinessError": true,
+    "businessErrorTimeStampUtc": "2025-08-05T10:32:30.2403697",
+    "ksefContext": "5992536573",
+    "currencyCode": "PLN",
+    "kind": "VAT",
+    "saleDate": "2025-04-22T00:00:00",
+    "saleDateTag": "W",
+    "selfInvoicing": false,
+    "external": false,
+    "isDispatch": true,
+    "receivedByExternalSystem": false,
+    "schemaVersion": "FA (2)_1-0E_2"
+  }
+}
+[12:32:41 PM] ⚠️ No KSEF status found in response (attempt 2/15), n8n may still be processing...
+[12:32:41 PM] 🔄 Will retry in 25 seconds...
+[12:32:41 PM] ==================================================
+[12:33:06 PM] 🔄 Requesting KSEF status from n8n (attempt 1/11)...
+[12:33:06 PM] ==================================================
+[12:33:06 PM] 📊 KSEF STATUS RESPONSE FROM N8N
+[12:33:06 PM] ==================================================
+[12:33:06 PM] 📊 HTTP Status: 500
+[12:33:06 PM] 📄 Response Data: {
+  "success": false,
+  "error": "Failed to resume workflow: n8n responded with status: 409 - {\"code\":409,\"message\":\"The execution \\\"324 has finished already.\"}"
+}
+[12:33:06 PM] ⚠️ N8N execution conflict (409) - waiting 5s before retry 2/11...
+[12:33:11 PM] 🔄 Requesting KSEF status from n8n (attempt 2/11)...
+[12:33:11 PM] ==================================================
+[12:33:11 PM] 📊 KSEF STATUS RESPONSE FROM N8N
+[12:33:11 PM] ==================================================
+[12:33:11 PM] 📊 HTTP Status: 500
+[12:33:11 PM] 📄 Response Data: {
+  "success": false,
+  "error": "Failed to resume workflow: n8n responded with status: 409 - {\"code\":409,\"message\":\"The execution \\\"324 has finished already.\"}"
+}
+[12:33:11 PM] ⚠️ N8N execution conflict (409) - waiting 7s before retry 3/11...
+[12:33:18 PM] 🔄 Requesting KSEF status from n8n (attempt 3/11)...
+[12:33:18 PM] ==================================================
+[12:33:18 PM] 📊 KSEF STATUS RESPONSE FROM N8N
+[12:33:18 PM] ==================================================
+[12:33:18 PM] 📊 HTTP Status: 500
+[12:33:18 PM] 📄 Response Data: {
+  "success": false,
+  "error": "Failed to resume workflow: n8n responded with status: 409 - {\"code\":409,\"message\":\"The execution \\\"324 has finished already.\"}"
+}
+[12:33:18 PM] ⚠️ N8N execution conflict (409) - waiting 9s before retry 4/11...
+[12:33:27 PM] 🔄 Requesting KSEF status from n8n (attempt 4/11)...
+[12:33:27 PM] ==================================================
+[12:33:27 PM] 📊 KSEF STATUS RESPONSE FROM N8N
+[12:33:27 PM] ==================================================
+[12:33:27 PM] 📊 HTTP Status: 500
+[12:33:27 PM] 📄 Response Data: {
+  "success": false,
+  "error": "Failed to resume workflow: n8n responded with status: 409 - {\"code\":409,\"message\":\"The execution \\\"324 has finished already.\"}"
+}
+[12:33:27 PM] ⚠️ N8N execution conflict (409) - waiting 11s before retry 5/11...
+[12:33:38 PM] 🔄 Requesting KSEF status from n8n (attempt 5/11)...
+[12:33:38 PM] ==================================================
+[12:33:38 PM] 📊 KSEF STATUS RESPONSE FROM N8N
+[12:33:38 PM] ==================================================
+[12:33:38 PM] 📊 HTTP Status: 500
