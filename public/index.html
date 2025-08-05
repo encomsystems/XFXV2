@@ -1435,12 +1435,21 @@
                         addLog(`📋 Final KSEF Status received: ${status}`);
 
                         if (status === 'SUBMITTED' || status === 'REJECTED') {
+                            // Stop the loop for both SUBMITTED and REJECTED statuses
                             if (status === 'SUBMITTED') {
                                 addLog('🎉 Invoice successfully submitted to KSEF!');
                                 addLog(`🏷️ KSEF Number: ${ksefData.ksefNumber}`);
-                            } else {
+                            } else if (status === 'REJECTED') {
                                 addLog('❌ Invoice rejected by KSEF system');
                                 addLog(`📋 Final KSEF Status: ${status}`);
+                                
+                                // Log business error messages if available
+                                if (ksefData.businessErrorMsgs && Array.isArray(ksefData.businessErrorMsgs)) {
+                                    addLog('📋 Business Error Messages:');
+                                    ksefData.businessErrorMsgs.forEach((msg, index) => {
+                                        addLog(`   ${index + 1}. ${msg}`);
+                                    });
+                                }
                             }
 
                             // Hide step 5 and show step 6 (Invoice Summary)
@@ -1449,18 +1458,19 @@
                             displayInvoiceSummary(ksefData);
 
                         } else if (status === 'UNKNOWN' || status === 'INPROGRESS') {
-                            addLog(`⚠️ Still processing with status: ${status}, waiting longer...`);
+                            pollingLoopCount++; // Increment loop counter
+                            addLog(`⚠️ Still processing with status: ${status} (loop ${pollingLoopCount}), waiting longer...`);
 
-                            // Update loader to show current status
+                            // Update loader to show current status and loop count
                             const ksefLoader = document.getElementById('ksefLoader');
                             const loaderText = ksefLoader.querySelector('p');
-                            loaderText.textContent = `Processing in KSEF system gate... Status: ${status}`;
+                            loaderText.textContent = `Processing in KSEF system gate... Status: ${status} (attempt ${pollingLoopCount})`;
 
                             // Wait longer and try again (n8n might need more time)
                             setTimeout(() => {
                                 addLog('🔄 Checking status again...');
                                 requestKsefStatus(retryCount);
-                            }, 15000);
+                            }, 25000);
 
                         } else {
                             addLog(`⚠️ Unknown status received: ${status}`);
@@ -1578,28 +1588,80 @@
             const resultHeader = summaryResult.querySelector('.result-header');
             const resultIcon = resultHeader.querySelector('.result-icon');
             const resultTitle = resultHeader.querySelector('h3');
-            const statusDiv = summaryResult.querySelector('div[style*="background: #d5f4e6"]');
+            const statusDiv = summaryResult.querySelector('div[style*="background: #d5f4e6"], div[style*="background: #fdf2f2"]');
 
             if (isRejected) {
-                // Update for rejected status
+                // Update for rejected status with red theme
                 summaryResult.classList.remove('success');
                 summaryResult.classList.add('error');
+                summaryResult.style.background = 'linear-gradient(135deg, #fdf2f2 0%, #fef5f5 100%)';
+                summaryResult.style.border = '2px solid #e74c3c';
+                
                 resultIcon.classList.remove('success');
                 resultIcon.classList.add('error');
+                resultIcon.style.background = '#e74c3c';
                 resultIcon.textContent = '✗';
                 resultTitle.textContent = 'Invoice Rejected';
                 statusDiv.style.background = '#fdf2f2';
                 statusDiv.style.color = '#e74c3c';
+                statusDiv.style.border = '2px solid #e74c3c';
 
                 // Update step title
                 const stepTitle = document.querySelector('#invoiceSummaryStep h2');
                 stepTitle.textContent = 'Invoice Rejected';
+                
+                // Add business error messages section for rejected invoices
+                if (ksefData.businessErrorMsgs && Array.isArray(ksefData.businessErrorMsgs)) {
+                    const businessErrorSection = document.createElement('div');
+                    businessErrorSection.style.cssText = `
+                        background: #fdf2f2; 
+                        border: 2px solid #e74c3c; 
+                        border-radius: 12px; 
+                        padding: 25px; 
+                        margin: 25px 0; 
+                        text-align: left;
+                    `;
+                    
+                    businessErrorSection.innerHTML = `
+                        <h3 style="color: #e74c3c; margin-bottom: 15px; display: flex; align-items: center;">
+                            <span style="margin-right: 10px;">⚠️</span>
+                            Business Error Messages
+                        </h3>
+                        <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e74c3c;">
+                            ${ksefData.businessErrorMsgs.map((msg, index) => 
+                                `<div style="margin-bottom: 10px; padding: 8px; background: #fef5f5; border-left: 4px solid #e74c3c; font-family: monospace; font-size: 0.9rem;">
+                                    <strong>${index + 1}.</strong> ${msg}
+                                </div>`
+                            ).join('')}
+                        </div>
+                    `;
+                    
+                    // Insert business error section before additional information
+                    const additionalInfoSection = summaryResult.querySelector('div[style*="margin-top: 25px"]');
+                    summaryResult.insertBefore(businessErrorSection, additionalInfoSection);
+                }
+                
             } else {
                 // Keep success styling for SUBMITTED
+                summaryResult.classList.remove('error');
+                summaryResult.classList.add('success');
+                summaryResult.style.background = 'linear-gradient(135deg, #d5f4e6 0%, #e8f8f0 100%)';
+                summaryResult.style.border = '2px solid #27ae60';
+                
+                resultIcon.classList.remove('error');
+                resultIcon.classList.add('success');
+                resultIcon.style.background = '#27ae60';
                 resultIcon.textContent = '↑';
                 resultTitle.textContent = 'Invoice Successfully Submitted';
                 statusDiv.style.background = '#d5f4e6';
                 statusDiv.style.color = 'inherit';
+                statusDiv.style.border = 'none';
+                
+                // Remove any existing business error messages section
+                const existingErrorSection = summaryResult.querySelector('div[style*="background: #fdf2f2"]');
+                if (existingErrorSection && existingErrorSection.querySelector('h3[style*="color: #e74c3c"]')) {
+                    existingErrorSection.remove();
+                }
             }
 
             // Handle QR Code (only show for SUBMITTED invoices)
