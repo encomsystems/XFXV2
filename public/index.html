@@ -910,6 +910,7 @@
         let resumeUrl = null;
         let selectedFile = null;
         let currentStep = 1;
+        let pollingLoopCount = 0; // Initialize polling loop counter
 
         function addLog(message, type = 'info') {
             const logContainer = document.getElementById('logContainer');
@@ -965,7 +966,7 @@
                 document.getElementById('ksefProcessingLoader').classList.add('hidden');
                 document.getElementById('successResult').classList.add('hidden');
                 document.getElementById('errorResult').classList.add('hidden');
-                
+
                 // Update step title for sending
                 const stepTitle = document.querySelector('#processingResultsStep h2');
                 stepTitle.textContent = 'Sending Invoice';
@@ -975,8 +976,8 @@
                 // Step 4: Acceptance of The Invoice for processing
                 document.getElementById('processingResultsStep').classList.remove('hidden');
                 document.getElementById('processingLoader').style.display = 'none';
-                document.getElementById('ksefProcessingLoader').classList.remove('hidden');
-                
+                document.getElementById('ksefProcessingLoader').style.display = 'block'; // Show ksef loader here
+
                 // Update step title for acceptance
                 const stepTitle = document.querySelector('#processingResultsStep h2');
                 stepTitle.textContent = 'Acceptance of The Invoice for processing';
@@ -1109,36 +1110,37 @@
 
                 if (data.success) {
                     addLog('✅ File uploaded successfully');
-                    
+
                     // Go to Step 3: Sending Invoice
                     showStep(3);
                     updateStatusItem('upload-invoice-status', 'complete');
                     updateStatusItem('sending-invoice-status', 'current');
-                    
+
                     addLog('📡 Sending invoice to XFX API...');
-                    
+
                     // Wait 3 seconds before checking for response and going to step 4
                     setTimeout(() => {
                         if (data.response) {
                             addLog('🎯 XFX API RESPONSE DETECTED:');
                             addLog(JSON.stringify(data.response, null, 2));
-                            
+
                             // Go to Step 4: Acceptance of The Invoice for processing
                             showStep(4);
                             updateStatusItem('sending-invoice-status', 'complete');
                             updateStatusItem('processing-status', 'current');
                             displaySuccessResult(data.response);
-                            
+
                             // Wait 3 seconds then automatically go to Step 5
                             setTimeout(() => {
                                 addLog('⏭️ Proceeding to KSEF processing...');
                                 showStep(5);
                                 updateStatusItem('processing-status', 'complete');
                                 updateStatusItem('ksef-processing-status', 'current');
-                                
+
                                 // Add button in Step 5 for getting details
                                 addGetDetailsButton();
                             }, 3000);
+
                         } else {
                             addLog('⏳ Waiting for XFX API response...');
                             // Go to step 4 anyway but show loading
@@ -1158,12 +1160,12 @@
                     // Handle XFX API error response
                     addLog('❌ XFX API Error Response:');
                     addLog(JSON.stringify(data.errorResponse, null, 2));
-                    
+
                     // Go to Step 3: Sending Invoice first
                     showStep(3);
                     updateStatusItem('upload-invoice-status', 'complete');
                     updateStatusItem('sending-invoice-status', 'current');
-                    
+
                     // Wait 3 seconds then show error in step 4
                     setTimeout(() => {
                         showStep(4);
@@ -1274,7 +1276,7 @@
 
             const ksefStep = document.getElementById('ksefProcessingStep');
             const ksefLoader = document.getElementById('ksefLoader');
-            
+
             const getDetailsButton = document.createElement('button');
             getDetailsButton.id = 'getDetailsBtn';
             getDetailsButton.className = 'start-btn';
@@ -1283,13 +1285,13 @@
             getDetailsButton.onclick = async () => {
                 getDetailsButton.disabled = true;
                 getDetailsButton.textContent = 'Getting Details...';
-                
+
                 addLog('📊 User requested processing details...');
-                
+
                 // Send get details request to n8n
                 await getProcessingDetails();
             };
-            
+
             // Insert button after the loader
             ksefLoader.parentNode.insertBefore(getDetailsButton, ksefLoader.nextSibling);
             addLog('🔘 Get Details button added - Click to retrieve processing information');
@@ -1337,7 +1339,7 @@
 
             addLog('📊 Requesting processing details from n8n...');
             addLog('🌐 Connecting to KSEF gate...');
-            
+
             // Show connecting message for 3 seconds
             const ksefLoader = document.getElementById('ksefLoader');
             const loaderText = ksefLoader.querySelector('p');
@@ -1345,7 +1347,7 @@
 
             // Wait 3 seconds before making the actual request
             await new Promise(resolve => setTimeout(resolve, 3000));
-            
+
             // Hide the get details button immediately
             const getDetailsBtn = document.getElementById('getDetailsBtn');
             if (getDetailsBtn) {
@@ -1358,7 +1360,7 @@
 
         async function requestKsefStatus(retryCount = 0) {
             const maxRetries = 10; // Maximum 10 retries (about 2 minutes total)
-            
+
             addLog(`🔄 Requesting KSEF status from n8n (attempt ${retryCount + 1}/${maxRetries + 1})...`);
 
             try {
@@ -1391,15 +1393,15 @@
                         addLog('💡 Try refreshing the page or check n8n workflow status manually.');
                         return;
                     }
-                    
+
                     const waitTime = Math.min(5000 + (retryCount * 2000), 20000); // Exponential backoff, max 20s
                     addLog(`⚠️ N8N execution conflict (409) - waiting ${waitTime/1000}s before retry ${retryCount + 2}/${maxRetries + 1}...`);
-                    
+
                     // Update loader to show we're waiting with retry info
                     const ksefLoader = document.getElementById('ksefLoader');
                     const loaderText = ksefLoader.querySelector('p');
                     loaderText.textContent = `Waiting for n8n execution to complete... (retry ${retryCount + 1}/${maxRetries + 1})`;
-                    
+
                     // Wait with exponential backoff and try again
                     setTimeout(() => {
                         requestKsefStatus(retryCount + 1);
@@ -1410,7 +1412,7 @@
                 if (data.success && (data.data || data.message)) {
                     // Check for final response with KSEF data
                     let ksefData = null;
-                    
+
                     // Handle different response formats from n8n
                     if (data.data && Array.isArray(data.data)) {
                         ksefData = data.data[0];
@@ -1427,11 +1429,11 @@
                             addLog('⚠️ Could not parse message as JSON');
                         }
                     }
-                    
+
                     if (ksefData && ksefData.ksefSubmissionStatus) {
                         const status = ksefData.ksefSubmissionStatus;
                         addLog(`📋 Final KSEF Status received: ${status}`);
-                        
+
                         if (status === 'SUBMITTED' || status === 'REJECTED') {
                             if (status === 'SUBMITTED') {
                                 addLog('🎉 Invoice successfully submitted to KSEF!');
@@ -1440,29 +1442,29 @@
                                 addLog('❌ Invoice rejected by KSEF system');
                                 addLog(`📋 Final KSEF Status: ${status}`);
                             }
-                            
+
                             // Hide step 5 and show step 6 (Invoice Summary)
                             showStep(6);
                             updateStatusItem('ksef-processing-status', 'complete');
                             displayInvoiceSummary(ksefData);
-                            
+
                         } else if (status === 'UNKNOWN' || status === 'INPROGRESS') {
                             addLog(`⚠️ Still processing with status: ${status}, waiting longer...`);
-                            
+
                             // Update loader to show current status
                             const ksefLoader = document.getElementById('ksefLoader');
                             const loaderText = ksefLoader.querySelector('p');
                             loaderText.textContent = `Processing in KSEF system gate... Status: ${status}`;
-                            
+
                             // Wait longer and try again (n8n might need more time)
                             setTimeout(() => {
                                 addLog('🔄 Checking status again...');
                                 requestKsefStatus(retryCount);
                             }, 15000);
-                            
+
                         } else {
                             addLog(`⚠️ Unknown status received: ${status}`);
-                            
+
                             // Update loader to show current status
                             const ksefLoader = document.getElementById('ksefLoader');
                             const loaderText = ksefLoader.querySelector('p');
@@ -1470,17 +1472,17 @@
                         }
                     } else {
                         addLog('⚠️ No KSEF status found in response, n8n may still be processing...');
-                        addLog('🔄 Will retry in 10 seconds...');
-                        
+                        addLog('🔄 Will retry in 25 seconds...');
+
                         // Wait and try again
                         setTimeout(() => {
                             requestKsefStatus(retryCount);
-                        }, 15000);
+                        }, 25000);
                     }
                 } else {
                     addLog(`❌ Failed to get processing details`);
                     addLog(`Error: ${data.error || 'Unknown error'}`);
-                    
+
                     // If it's just waiting, try again
                     if (data.raw && data.message) {
                         if (retryCount >= maxRetries) {
@@ -1497,7 +1499,7 @@
 
             } catch (error) {
                 addLog(`❌ Get details error: ${error.message}`, 'error');
-                
+
                 // Check if it's a network/connection error - retry
                 if (error.message.includes('fetch') || error.message.includes('network')) {
                     if (retryCount >= maxRetries) {
@@ -1541,10 +1543,10 @@
 
         function displayInvoiceSummary(ksefData) {
             addLog('📋 Displaying invoice summary...');
-            
+
             const status = ksefData.ksefSubmissionStatus || 'UNKNOWN';
             const isRejected = status === 'REJECTED';
-            
+
             // Update all summary fields
             document.getElementById('summaryStatus').textContent = status;
             document.getElementById('summaryKsefNumber').textContent = ksefData.ksefNumber || '-';
@@ -1553,7 +1555,7 @@
             document.getElementById('summaryVatNumber').textContent = ksefData.subject1VatNumber || '-';
             document.getElementById('summaryTotalAmount').textContent = ksefData.totalAmount ? `${ksefData.totalAmount} ${ksefData.currencyCode || 'PLN'}` : '-';
             document.getElementById('summaryProcessingMode').textContent = ksefData.processingMode || '-';
-            
+
             // Format dates
             if (ksefData.issueDate) {
                 document.getElementById('summaryIssueDate').textContent = new Date(ksefData.issueDate).toLocaleDateString();
@@ -1567,17 +1569,17 @@
             if (ksefData.saleDate) {
                 document.getElementById('summarySaleDate').textContent = new Date(ksefData.saleDate).toLocaleDateString();
             }
-            
+
             document.getElementById('summarySchemaVersion').textContent = ksefData.schemaVersion || '-';
             document.getElementById('summaryCurrencyCode').textContent = ksefData.currencyCode || '-';
-            
+
             // Update UI based on status
             const summaryResult = document.getElementById('invoiceSummaryResult');
             const resultHeader = summaryResult.querySelector('.result-header');
             const resultIcon = resultHeader.querySelector('.result-icon');
             const resultTitle = resultHeader.querySelector('h3');
             const statusDiv = summaryResult.querySelector('div[style*="background: #d5f4e6"]');
-            
+
             if (isRejected) {
                 // Update for rejected status
                 summaryResult.classList.remove('success');
@@ -1588,7 +1590,7 @@
                 resultTitle.textContent = 'Invoice Rejected';
                 statusDiv.style.background = '#fdf2f2';
                 statusDiv.style.color = '#e74c3c';
-                
+
                 // Update step title
                 const stepTitle = document.querySelector('#invoiceSummaryStep h2');
                 stepTitle.textContent = 'Invoice Rejected';
@@ -1599,11 +1601,11 @@
                 statusDiv.style.background = '#d5f4e6';
                 statusDiv.style.color = 'inherit';
             }
-            
+
             // Handle QR Code (only show for SUBMITTED invoices)
             if (ksefData.qrCode && !isRejected) {
                 document.getElementById('qrCodeUrl').textContent = ksefData.qrCode;
-                
+
                 // Generate QR Code placeholder (in real implementation, you'd use a QR code library)
                 const qrContainer = document.getElementById('qrCodeContainer');
                 qrContainer.innerHTML = `
@@ -1612,7 +1614,7 @@
                         ${ksefData.ksefNumber || 'CODE'}
                     </div>
                 `;
-                
+
                 // Show QR code section
                 qrContainer.parentElement.style.display = 'block';
             } else {
@@ -1620,9 +1622,9 @@
                 const qrSection = document.getElementById('qrCodeContainer').parentElement;
                 qrSection.style.display = 'none';
             }
-            
+
             updateStatusItem('invoice-summary-status', 'complete');
-            
+
             addLog('✅ Invoice summary displayed successfully');
             addLog(`📄 Final Status: ${status}`);
             addLog(`🏷️ KSEF Number: ${ksefData.ksefNumber}`);
