@@ -137,9 +137,17 @@ app.post('/api/resume-workflow', (req, res) => {
             console.log('✅ N8N PARSED JSON RESPONSE:');
             console.log(JSON.stringify(data, null, 2));
             
-            // Check if the response contains XFX API response data
-            if (data.response) {
-                console.log('🎯 XFX API RESPONSE DETECTED:');
+            // Check if the response is an array containing XFX API response data
+            if (Array.isArray(data) && data.length > 0 && data[0].xfxTrackingId) {
+                console.log('🎯 XFX API RESPONSE DETECTED (ARRAY FORMAT):');
+                console.log(JSON.stringify(data[0], null, 2));
+                res.json({
+                    success: true,
+                    message: 'Invoice processed',
+                    response: data[0]  // Extract first item from array
+                });
+            } else if (data.response) {
+                console.log('🎯 XFX API RESPONSE DETECTED (OBJECT FORMAT):');
                 console.log(JSON.stringify(data.response, null, 2));
                 res.json({
                     success: true,
@@ -148,7 +156,10 @@ app.post('/api/resume-workflow', (req, res) => {
                 });
             } else {
                 console.log('📤 Sending parsed data to frontend');
-                res.json(data);
+                res.json({
+                    success: true,
+                    data: data
+                });
             }
         } catch (parseError) {
                 console.log('❌ Failed to parse JSON response:', parseError.message);
