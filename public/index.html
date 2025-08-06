@@ -524,6 +524,41 @@
             background: #c0392b;
         }
 
+        .terminate-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .terminate-btn:hover {
+            background: #c82333;
+        }
+
+        .terminate-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .termination-result {
+            background: linear-gradient(135deg, #fff3cd 0%, #fef5e7 100%);
+            border: 2px solid #ffc107;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .termination-result .result-icon {
+            background: #ffc107;
+            color: white;
+        }
+
         .system-logs {
             background: white;
             border-radius: 12px;
@@ -804,6 +839,31 @@
                     <div class="spinner"></div>
                     <p>Processing invoice in KSEF system gate...</p>
                 </div>
+
+                <!-- Termination Result -->
+                <div class="termination-result hidden" id="terminationResult">
+                    <div class="result-header">
+                        <div class="result-icon">⏹️</div>
+                        <h3>Process Terminated by User</h3>
+                    </div>
+                    <p style="margin: 15px 0; color: #856404;">
+                        The invoice processing has been stopped at your request.
+                        The process was terminated during KSEF system polling.
+                    </p>
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <label style="font-weight: bold; color: #856404;">Total Polling Attempts:</label>
+                            <span id="terminationPollingCount">-</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <label style="font-weight: bold; color: #856404;">Termination Time:</label>
+                            <span id="terminationTime">-</span>
+                        </div>
+                    </div>
+                    <button class="retry-btn" onclick="restartFromUpload()" style="margin-top: 20px;">
+                        Start New Process
+                    </button>
+                </div>
             </div>
 
             <!-- Step 6: Invoice Summary -->
@@ -921,6 +981,8 @@
         let selectedFile = null;
         let currentStep = 1;
         let pollingLoopCount = 0; // Initialize polling loop counter
+        let isPollingActive = false; // Track if polling is active
+        let pollingTimeout = null; // Store timeout reference for cancellation
 
         function addLog(message, type = 'info') {
             const logContainer = document.getElementById('logContainer');
@@ -1333,6 +1395,101 @@
             addLog('🔘 Get Details button added - Click to retrieve processing information');
         }
 
+        function addTerminateButton() {
+            // Check if button already exists
+            if (document.getElementById('terminateBtn')) {
+                return;
+            }
+
+            const ksefStep = document.getElementById('ksefProcessingStep');
+            const ksefLoader = document.getElementById('ksefLoader');
+
+            const terminateButton = document.createElement('button');
+            terminateButton.id = 'terminateBtn';
+            terminateButton.className = 'terminate-btn';
+            terminateButton.style.marginTop = '20px';
+            terminateButton.textContent = 'Terminate Process';
+            terminateButton.onclick = () => {
+                terminatePolling();
+            };
+
+            // Insert button after the loader
+            ksefLoader.parentNode.insertBefore(terminateButton, ksefLoader.nextSibling);
+            addLog('🛑 Terminate button added - Click to stop the polling process');
+        }
+
+        function terminatePolling() {
+            if (!isPollingActive) {
+                addLog('⚠️ No active polling process to terminate');
+                return;
+            }
+
+            // Clear any pending timeout
+            if (pollingTimeout) {
+                clearTimeout(pollingTimeout);
+                pollingTimeout = null;
+            }
+
+            // Mark polling as inactive
+            isPollingActive = false;
+
+            // Log termination
+            addLog('='.repeat(50));
+            addLog('🛑 PROCESS TERMINATED BY USER');
+            addLog('='.repeat(50));
+            addLog(`⏹️ User terminated the polling process at attempt ${pollingLoopCount}`);
+            addLog(`⏰ Termination time: ${new Date().toLocaleString()}`);
+            addLog('🔄 Total polling loops completed: ' + pollingLoopCount);
+            addLog('❌ Process stopped before completion');
+            addLog('='.repeat(50));
+
+            // Hide loader and show termination result
+            document.getElementById('ksefLoader').style.display = 'none';
+            document.getElementById('terminationResult').classList.remove('hidden');
+
+            // Update termination details
+            document.getElementById('terminationPollingCount').textContent = pollingLoopCount;
+            document.getElementById('terminationTime').textContent = new Date().toLocaleString();
+
+            // Hide terminate button
+            const terminateBtn = document.getElementById('terminateBtn');
+            if (terminateBtn) {
+                terminateBtn.style.display = 'none';
+            }
+
+            // Hide get details button
+            const getDetailsBtn = document.getElementById('getDetailsBtn');
+            if (getDetailsBtn) {
+                getDetailsBtn.style.display = 'none';
+            }
+
+            addLog('🏁 Process termination completed. You can start a new process if needed.');
+        }
+
+        function restartFromUpload() {
+            // Reset all state
+            pollingLoopCount = 0;
+            isPollingActive = false;
+            if (pollingTimeout) {
+                clearTimeout(pollingTimeout);
+                pollingTimeout = null;
+            }
+
+            // Hide termination result
+            document.getElementById('terminationResult').classList.add('hidden');
+
+            // Reset status items
+            updateStatusItem('processing-status', 'pending');
+            updateStatusItem('ksef-processing-status', 'pending');
+            updateStatusItem('invoice-summary-status', 'pending');
+
+            // Go back to upload step
+            showStep(2);
+            
+            addLog('🔄 Restarting process from upload step...');
+            addLog('📂 Please select and upload your XML file again');
+        }
+
         function displayErrorResult(data) {
             const errorResult = document.getElementById('errorResult');
 
@@ -1373,6 +1530,9 @@
                 return;
             }
 
+            // Set polling as active
+            isPollingActive = true;
+
             addLog('📊 Requesting processing details from n8n...');
             addLog('🌐 Connecting to KSEF gate...');
 
@@ -1384,11 +1544,19 @@
             // Wait 3 seconds before making the actual request
             await new Promise(resolve => setTimeout(resolve, 3000));
 
-            // Hide the get details button immediately
+            // Check if still active (user might have terminated during wait)
+            if (!isPollingActive) {
+                return;
+            }
+
+            // Hide the get details button and show terminate button
             const getDetailsBtn = document.getElementById('getDetailsBtn');
             if (getDetailsBtn) {
                 getDetailsBtn.style.display = 'none';
             }
+
+            // Add terminate button
+            addTerminateButton();
 
             // Make a single request to n8n - let n8n handle the polling internally
             await requestKsefStatus();
@@ -1397,6 +1565,12 @@
         async function requestKsefStatus(retryCount = 0) {
             const maxRetries = 50; // Increased retry limit for errors
             // Remove maxPollingAttempts limit - continue polling until response
+
+            // Check if polling is still active
+            if (!isPollingActive) {
+                addLog('⚠️ Polling terminated by user, stopping requests');
+                return;
+            }
 
             addLog(`🔄 Requesting KSEF status from n8n (attempt ${retryCount + 1})...`);
 
@@ -1440,8 +1614,10 @@
                     loaderText.textContent = `Waiting for n8n execution to complete... (retry ${retryCount + 1}/${maxRetries + 1})`;
 
                     // Wait with exponential backoff and try again
-                    setTimeout(() => {
-                        requestKsefStatus(retryCount + 1);
+                    pollingTimeout = setTimeout(() => {
+                        if (isPollingActive) {
+                            requestKsefStatus(retryCount + 1);
+                        }
                     }, waitTime);
                     return;
                 }
@@ -1494,8 +1670,16 @@
                                 }
                             }
 
-                            // Reset polling counter and show step 6
+                            // Mark polling as inactive and reset counter
+                            isPollingActive = false;
                             pollingLoopCount = 0;
+                            
+                            // Hide terminate button
+                            const terminateBtn = document.getElementById('terminateBtn');
+                            if (terminateBtn) {
+                                terminateBtn.style.display = 'none';
+                            }
+                            
                             showStep(6);
                             updateStatusItem('ksef-processing-status', 'complete');
                             displayInvoiceSummary(ksefData);
@@ -1512,9 +1696,11 @@
                             loaderText.textContent = `Processing in KSEF system gate... Status: ${status} (attempt ${pollingLoopCount})`;
 
                             // Wait longer and try again (n8n might need more time)
-                            setTimeout(() => {
-                                addLog('🔄 Checking status again...');
-                                requestKsefStatus(0); // Reset retry count for polling attempts
+                            pollingTimeout = setTimeout(() => {
+                                if (isPollingActive) {
+                                    addLog('🔄 Checking status again...');
+                                    requestKsefStatus(0); // Reset retry count for polling attempts
+                                }
                             }, 25000);
 
                         } else {
@@ -1526,8 +1712,10 @@
                             const loaderText = ksefLoader.querySelector('p');
                             loaderText.textContent = `Processing in KSEF system gate... Status: ${status} (attempt ${pollingLoopCount})`;
                             
-                            setTimeout(() => {
-                                requestKsefStatus(0);
+                            pollingTimeout = setTimeout(() => {
+                                if (isPollingActive) {
+                                    requestKsefStatus(0);
+                                }
                             }, 25000);
                         }
                     } else {
@@ -1537,8 +1725,10 @@
                         addLog('🔄 Will retry in 25 seconds...');
 
                         // Wait and try again
-                        setTimeout(() => {
-                            requestKsefStatus(0);
+                        pollingTimeout = setTimeout(() => {
+                            if (isPollingActive) {
+                                requestKsefStatus(0);
+                            }
                         }, 25000);
                     }
                 } else {
@@ -1552,8 +1742,10 @@
                             retryCount = 0; // Reset retry count
                         }
                         addLog('🔄 Received non-JSON response, retrying in 15 seconds...');
-                        setTimeout(() => {
-                            requestKsefStatus(retryCount + 1);
+                        pollingTimeout = setTimeout(() => {
+                            if (isPollingActive) {
+                                requestKsefStatus(retryCount + 1);
+                            }
                         }, 15000);
                     }
                 }
@@ -1569,8 +1761,10 @@
                         retryCount = 0; // Reset retry count
                     }
                     addLog('🔄 Network error, retrying in 15 seconds...');
-                    setTimeout(() => {
-                        requestKsefStatus(retryCount + 1);
+                    pollingTimeout = setTimeout(() => {
+                        if (isPollingActive) {
+                            requestKsefStatus(retryCount + 1);
+                        }
                     }, 15000);
                 } else if (error.message.includes('409')) {
                     if (retryCount >= maxRetries) {
@@ -1578,8 +1772,10 @@
                         retryCount = 0; // Reset retry count
                     }
                     addLog('⚠️ N8N execution conflict - waiting for completion...');
-                    setTimeout(() => {
-                        requestKsefStatus(retryCount + 1);
+                    pollingTimeout = setTimeout(() => {
+                        if (isPollingActive) {
+                            requestKsefStatus(retryCount + 1);
+                        }
                     }, 15000);
                 }
             }
