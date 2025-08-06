@@ -76,9 +76,13 @@
             cursor: pointer;
         }
 
-        .status-item:hover {
+        .status-item[onclick]:hover {
             background-color: #f0f7ff;
             transform: translateX(5px);
+        }
+
+        .status-item:not([onclick]) {
+            cursor: default;
         }
 
         .status-item.active {
@@ -585,7 +589,7 @@
                 <h2>Invoice workflow status</h2>
                 <p class="subtitle">Track your progress</p>
 
-                <div class="status-item pending" id="start-process-status" onclick="jumpToStep(1)">
+                <div class="status-item pending" id="start-process-status">
                     <div class="status-icon pending">1</div>
                     <div class="status-text">
                         <h3>Start Process</h3>
@@ -593,7 +597,7 @@
                     </div>
                 </div>
 
-                <div class="status-item pending" id="upload-invoice-status" onclick="jumpToStep(2)">
+                <div class="status-item pending" id="upload-invoice-status">
                     <div class="status-icon pending">2</div>
                     <div class="status-text">
                         <h3>Upload Invoice</h3>
@@ -601,7 +605,7 @@
                     </div>
                 </div>
 
-                <div class="status-item pending" id="sending-invoice-status" onclick="jumpToStep(3)">
+                <div class="status-item pending" id="sending-invoice-status">
                     <div class="status-icon pending">3</div>
                     <div class="status-text">
                         <h3>Sending Invoice</h3>
