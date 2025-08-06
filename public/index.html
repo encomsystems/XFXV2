@@ -73,6 +73,12 @@
             margin-bottom: 8px;
             border-radius: 8px;
             transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .status-item:hover {
+            background-color: #f0f7ff;
+            transform: translateX(5px);
         }
 
         .status-item.active {
@@ -579,7 +585,7 @@
                 <h2>Invoice workflow status</h2>
                 <p class="subtitle">Track your progress</p>
 
-                <div class="status-item pending" id="start-process-status">
+                <div class="status-item pending" id="start-process-status" onclick="jumpToStep(1)">
                     <div class="status-icon pending">1</div>
                     <div class="status-text">
                         <h3>Start Process</h3>
@@ -587,7 +593,7 @@
                     </div>
                 </div>
 
-                <div class="status-item pending" id="upload-invoice-status">
+                <div class="status-item pending" id="upload-invoice-status" onclick="jumpToStep(2)">
                     <div class="status-icon pending">2</div>
                     <div class="status-text">
                         <h3>Upload Invoice</h3>
@@ -595,7 +601,7 @@
                     </div>
                 </div>
 
-                <div class="status-item pending" id="sending-invoice-status">
+                <div class="status-item pending" id="sending-invoice-status" onclick="jumpToStep(3)">
                     <div class="status-icon pending">3</div>
                     <div class="status-text">
                         <h3>Sending Invoice</h3>
@@ -603,7 +609,7 @@
                     </div>
                 </div>
 
-                <div class="status-item pending" id="processing-status">
+                <div class="status-item pending" id="processing-status" onclick="jumpToStep(4)">
                     <div class="status-icon pending">4</div>
                     <div class="status-text">
                         <h3>Acceptance of The Invoice for processing</h3>
@@ -611,7 +617,7 @@
                     </div>
                 </div>
 
-                <div class="status-item pending" id="ksef-processing-status">
+                <div class="status-item pending" id="ksef-processing-status" onclick="jumpToStep(5)">
                     <div class="status-icon pending">5</div>
                     <div class="status-text">
                         <h3>Invoice Processing</h3>
@@ -619,7 +625,7 @@
                     </div>
                 </div>
 
-                <div class="status-item pending" id="invoice-summary-status">
+                <div class="status-item pending" id="invoice-summary-status" onclick="jumpToStep(6)">
                     <div class="status-icon pending">6</div>
                     <div class="status-text">
                         <h3>Invoice Summary</h3>
@@ -940,6 +946,32 @@
             } else {
                 item.classList.add('pending');
                 icon.classList.add('pending');
+            }
+        }
+
+        function jumpToStep(stepNumber) {
+            // Only allow jumping to completed or current steps
+            const stepStatuses = [
+                { id: 'start-process-status', step: 1 },
+                { id: 'upload-invoice-status', step: 2 },
+                { id: 'sending-invoice-status', step: 3 },
+                { id: 'processing-status', step: 4 },
+                { id: 'ksef-processing-status', step: 5 },
+                { id: 'invoice-summary-status', step: 6 }
+            ];
+
+            const targetStep = stepStatuses.find(s => s.step === stepNumber);
+            if (targetStep) {
+                const element = document.getElementById(targetStep.id);
+                const isCompleted = element.classList.contains('active');
+                const isCurrent = element.classList.contains('current');
+                
+                if (isCompleted || isCurrent || stepNumber <= currentStep) {
+                    addLog(`🔄 Jumping to Step ${stepNumber}...`);
+                    showStep(stepNumber);
+                } else {
+                    addLog(`⚠️ Step ${stepNumber} is not yet available`);
+                }
             }
         }
 
@@ -1359,10 +1391,10 @@
         }
 
         async function requestKsefStatus(retryCount = 0) {
-            const maxRetries = 10; // Maximum 10 retries for errors
-            const maxPollingAttempts = 15; // Maximum 15 polling attempts (about 6-7 minutes)
+            const maxRetries = 50; // Increased retry limit for errors
+            // Remove maxPollingAttempts limit - continue polling until response
 
-            addLog(`🔄 Requesting KSEF status from n8n (attempt ${retryCount + 1}/${maxRetries + 1})...`);
+            addLog(`🔄 Requesting KSEF status from n8n (attempt ${retryCount + 1})...`);
 
             try {
                 // Create form data to trigger the wait node
@@ -1390,9 +1422,9 @@
                 // Handle n8n execution conflict (409 error) - wait and retry
                 if (response.status === 409 || (response.status === 500 && data.error && data.error.includes('409'))) {
                     if (retryCount >= maxRetries) {
-                        addLog('❌ Maximum retry attempts reached. N8N execution may be stuck.');
-                        addLog('💡 Try refreshing the page or check n8n workflow status manually.');
-                        return;
+                        addLog('⚠️ Many retry attempts made. Continuing to wait for N8N execution...');
+                        // Continue polling instead of stopping
+                        retryCount = 0; // Reset retry count to prevent overflow
                     }
 
                     const waitTime = Math.min(5000 + (retryCount * 2000), 20000); // Exponential backoff, max 20s
@@ -1468,32 +1500,12 @@
                         } else if (status === 'UNKNOWN' || status === 'INPROGRESS') {
                             pollingLoopCount++; // Increment loop counter
                             
-                            // Check if we've exceeded maximum polling attempts
-                            if (pollingLoopCount >= maxPollingAttempts) {
-                                addLog(`❌ Maximum polling attempts reached (${maxPollingAttempts}). Stopping loop.`);
-                                addLog('💡 The KSEF system may be taking longer than expected. Try refreshing the page.');
-                                addLog('🔄 Current status was: ' + status);
-                                
-                                // Show timeout message in step 6 with current data
-                                showStep(6);
-                                updateStatusItem('ksef-processing-status', 'complete');
-                                
-                                // Create a timeout summary
-                                const timeoutData = {
-                                    ...ksefData,
-                                    ksefSubmissionStatus: 'TIMEOUT',
-                                    timeoutReason: `Exceeded ${maxPollingAttempts} polling attempts. Last status: ${status}`
-                                };
-                                displayInvoiceSummary(timeoutData);
-                                return;
-                            }
-                            
-                            addLog(`⚠️ Still processing with status: ${status} (loop ${pollingLoopCount}/${maxPollingAttempts}), waiting longer...`);
+                            addLog(`⚠️ Still processing with status: ${status} (loop ${pollingLoopCount}), continuing to wait...`);
 
                             // Update loader to show current status and loop count
                             const ksefLoader = document.getElementById('ksefLoader');
                             const loaderText = ksefLoader.querySelector('p');
-                            loaderText.textContent = `Processing in KSEF system gate... Status: ${status} (attempt ${pollingLoopCount}/${maxPollingAttempts})`;
+                            loaderText.textContent = `Processing in KSEF system gate... Status: ${status} (attempt ${pollingLoopCount})`;
 
                             // Wait longer and try again (n8n might need more time)
                             setTimeout(() => {
@@ -1504,19 +1516,11 @@
                         } else {
                             addLog(`⚠️ Unknown status received: ${status}`);
                             pollingLoopCount++;
-                            
-                            if (pollingLoopCount >= maxPollingAttempts) {
-                                addLog(`❌ Maximum polling attempts reached with unknown status. Stopping.`);
-                                showStep(6);
-                                updateStatusItem('ksef-processing-status', 'complete');
-                                displayInvoiceSummary({...ksefData, ksefSubmissionStatus: 'UNKNOWN_TIMEOUT'});
-                                return;
-                            }
 
                             // Update loader to show current status
                             const ksefLoader = document.getElementById('ksefLoader');
                             const loaderText = ksefLoader.querySelector('p');
-                            loaderText.textContent = `Processing in KSEF system gate... Status: ${status} (attempt ${pollingLoopCount}/${maxPollingAttempts})`;
+                            loaderText.textContent = `Processing in KSEF system gate... Status: ${status} (attempt ${pollingLoopCount})`;
                             
                             setTimeout(() => {
                                 requestKsefStatus(0);
@@ -1525,15 +1529,7 @@
                     } else {
                         pollingLoopCount++;
                         
-                        if (pollingLoopCount >= maxPollingAttempts) {
-                            addLog(`❌ Maximum polling attempts reached without KSEF status. Stopping.`);
-                            showStep(6);
-                            updateStatusItem('ksef-processing-status', 'complete');
-                            displayInvoiceSummary({ksefSubmissionStatus: 'NO_STATUS_TIMEOUT'});
-                            return;
-                        }
-                        
-                        addLog(`⚠️ No KSEF status found in response (attempt ${pollingLoopCount}/${maxPollingAttempts}), n8n may still be processing...`);
+                        addLog(`⚠️ No KSEF status found in response (attempt ${pollingLoopCount}), n8n may still be processing...`);
                         addLog('🔄 Will retry in 25 seconds...');
 
                         // Wait and try again
@@ -1548,8 +1544,8 @@
                     // If it's just waiting, try again
                     if (data.raw && data.message) {
                         if (retryCount >= maxRetries) {
-                            addLog('❌ Maximum retry attempts reached for non-JSON response.');
-                            return;
+                            addLog('⚠️ Many retry attempts made, continuing to wait...');
+                            retryCount = 0; // Reset retry count
                         }
                         addLog('🔄 Received non-JSON response, retrying in 15 seconds...');
                         setTimeout(() => {
@@ -1565,8 +1561,8 @@
                 // Check if it's a network/connection error - retry
                 if (error.message.includes('fetch') || error.message.includes('network')) {
                     if (retryCount >= maxRetries) {
-                        addLog('❌ Maximum retry attempts reached for network error.');
-                        return;
+                        addLog('⚠️ Many network retry attempts made, continuing to wait...');
+                        retryCount = 0; // Reset retry count
                     }
                     addLog('🔄 Network error, retrying in 15 seconds...');
                     setTimeout(() => {
@@ -1574,8 +1570,8 @@
                     }, 15000);
                 } else if (error.message.includes('409')) {
                     if (retryCount >= maxRetries) {
-                        addLog('❌ Maximum retry attempts reached for 409 conflict.');
-                        return;
+                        addLog('⚠️ Many 409 conflict attempts made, continuing to wait...');
+                        retryCount = 0; // Reset retry count
                     }
                     addLog('⚠️ N8N execution conflict - waiting for completion...');
                     setTimeout(() => {
