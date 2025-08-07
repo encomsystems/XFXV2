@@ -906,6 +906,11 @@
 
         <div class="system-logs">
             <h2>System Logs</h2>
+            <div style="margin-bottom: 15px;">
+                <button class="start-btn" onclick="saveLogsToFile()" style="background: #e67e22; font-size: 0.9rem; padding: 8px 20px;">
+                    💾 Save Logs to File
+                </button>
+            </div>
             <div class="log-container" id="logContainer">
                 <div class="log-entry">System initialized - Ready to process invoices</div>
             </div>
@@ -917,6 +922,7 @@
         let selectedFile = null;
         let currentStep = 1;
         let pollingLoopCount = 0; // Initialize polling loop counter
+        let systemLogs = []; // Store all log messages
 
         function addLog(message, type = 'info') {
             const logContainer = document.getElementById('logContainer');
@@ -926,6 +932,37 @@
             logEntry.innerHTML = `<span class="log-time">[${timestamp}]</span> ${message}`;
             logContainer.appendChild(logEntry);
             logContainer.scrollTop = logContainer.scrollHeight;
+            
+            // Store log in array for file saving
+            const fullTimestamp = new Date().toISOString();
+            systemLogs.push(`[${fullTimestamp}] ${message}`);
+        }
+
+        function saveLogsToFile() {
+            if (!selectedFile) {
+                addLog('⚠️ No file selected, cannot generate log filename');
+                return;
+            }
+
+            const filename = selectedFile.name.replace(/\.[^/.]+$/, ""); // Remove extension
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('.')[0]; // Format: YYYY-MM-DDTHH-mm-ss
+            const logFilename = `${filename}_${timestamp}.log`;
+            
+            // Create log content
+            const logContent = systemLogs.join('\n');
+            
+            // Create and download file
+            const blob = new Blob([logContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = logFilename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            addLog(`💾 System logs saved to file: ${logFilename}`);
         }
 
         function updateStatusItem(itemId, status) {
@@ -1774,6 +1811,8 @@
         // Initialize
         window.addEventListener('load', () => {
             showStep(1);
+            // Initialize logs array with first message
+            systemLogs.push(`[${new Date().toISOString()}] System initialized - Ready to process invoices`);
             setTimeout(() => {
                 addLog('💡 XFX Invoice System loaded successfully');
                 addLog('✅ Ready to process invoices - Click Start Process to begin');
