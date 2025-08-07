@@ -1,0 +1,62 @@
+[8:54:46 AM] 🛑 Terminate button added - Click to stop the polling process
+[8:54:46 AM] 🔄 Requesting KSEF status from n8n (attempt 1)...
+[8:54:46 AM] ==================================================
+[8:54:46 AM] 📊 KSEF STATUS RESPONSE FROM N8N
+[8:54:46 AM] ==================================================
+[8:54:46 AM] 📊 HTTP Status: 200
+[8:54:46 AM] 📄 Response Data: {
+  "success": true,
+  "data": [
+    {
+      "ksefSubmissionStatus": "UNKNOWN",
+      "ksefSubmissionStatusCode": 0,
+      "externalTrackingId": "JDE5372016245",
+      "hasUpo": false,
+      "requiresBatchDispatch": false,
+      "isInAnyBatch": false,
+      "requiresManualAcceptUsersStr": "-",
+      "requiresManualAcceptUsersConfirmedStr": "-",
+      "timeToTimeout": 0,
+      "processingMode": "Online",
+      "id": "f6a3ee0f-1966-4867-9edd-08ddbf89de19",
+      "dateReceivedUtc": "2025-08-07T06:54:35.6722547",
+      "status": "NotStarted",
+      "fkSystem": "SAP",
+      "number": "25908990",
+      "subject1VatNumber": "5992536573",
+      "subject1Name": "ICT Poland Sp. z o.o.",
+      "subject2Name": "XXX",
+      "subject3RoleOther": false,
+      "totalAmount": 150,
+      "issueDate": "2025-05-12T00:00:00",
+      "hasBusinessError": false,
+      "ksefContext": "5992536573",
+      "currencyCode": "PLN",
+      "kind": "VAT",
+      "saleDate": "2025-04-22T00:00:00",
+      "saleDateTag": "W",
+      "selfInvoicing": false,
+      "external": false,
+      "isDispatch": true,
+      "receivedByExternalSystem": false,
+      "schemaVersion": "FA (2)_1-0E_2"
+    }
+  ]
+}
+[8:54:46 AM] 📋 Final KSEF Status received: UNKNOWN
+[8:54:46 AM] ⚠️ Still processing with status: UNKNOWN (attempt 1/30), continuing to wait...
+[8:54:46 AM] ⏳ Waiting 5 minutes before next status check...
+[8:54:46 AM] ==================================================
+[8:59:46 AM] 🔄 Checking status again...
+[8:59:46 AM] 🔄 Requesting KSEF status from n8n (attempt 1)...
+[9:04:47 AM] ==================================================
+[9:04:47 AM] 📊 KSEF STATUS RESPONSE FROM N8N
+[9:04:47 AM] ==================================================
+[9:04:47 AM] 📊 HTTP Status: 500
+[9:04:47 AM] 📄 Response Data: {
+  "success": false,
+  "error": "Failed to resume workflow: fetch failed"
+}
+[9:04:47 AM] ❌ Failed to get processing details
+[9:04:47 AM] Error: Failed to resume workflow: fetch failed
+[9:04:47 AM] ==================================================
